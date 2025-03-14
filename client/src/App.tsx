@@ -6,6 +6,7 @@ import NotFound from "@/pages/not-found";
 import LoginPage from "@/pages/login-page";
 import RegisterPage from "@/pages/register-page";
 import Dashboard from "@/pages/dashboard";
+import AdminPage from "@/pages/admin-page";
 import { AuthProvider } from "@/context/auth-context";
 
 function Router() {
@@ -14,6 +15,7 @@ function Router() {
       <Route path="/" component={LoginPage} />
       <Route path="/register" component={RegisterPage} />
       <Route path="/dashboard" component={Dashboard} />
+      <Route path="/admin" component={AdminPage} />
       <Route component={NotFound} />
     </Switch>
   );
