@@ -8,6 +8,10 @@ export const users = pgTable("users", {
   password: text("password").notNull(),
   email: text("email").notNull().unique(),
   name: text("name"),
+  role: text("role").notNull().default("user"), // New: 'admin' or 'user'
+  googleId: text("google_id").unique(), // New: for Google Auth
+  profilePicture: text("profile_picture"), // New: URL to profile picture
+  createdAt: timestamp("created_at").defaultNow(), // New: track when user was created
 });
 
 export const insertUserSchema = createInsertSchema(users).pick({
@@ -15,6 +19,16 @@ export const insertUserSchema = createInsertSchema(users).pick({
   password: true,
   email: true,
   name: true,
+  role: true,
+  googleId: true,
+  profilePicture: true,
+});
+
+export const registerUserSchema = z.object({
+  username: z.string().min(3, "Username must be at least 3 characters"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
+  email: z.string().email("Invalid email address"),
+  name: z.string().min(1, "Name is required"),
 });
 
 export const loginUserSchema = z.object({
@@ -23,6 +37,7 @@ export const loginUserSchema = z.object({
 });
 
 export type LoginUserInput = z.infer<typeof loginUserSchema>;
+export type RegisterUserInput = z.infer<typeof registerUserSchema>;
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 

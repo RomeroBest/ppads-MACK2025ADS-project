@@ -1,16 +1,201 @@
-import type { Express, Request, Response } from "express";
+import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertTaskSchema, loginUserSchema, taskFormSchema } from "@shared/schema";
+import { 
+  insertTaskSchema, 
+  loginUserSchema, 
+  registerUserSchema, 
+  taskFormSchema 
+} from "@shared/schema";
 import { z } from "zod";
 import { ZodError } from "zod";
 import { fromZodError } from "zod-validation-error";
+
+// Simple middleware to check if user is admin
+const isAdmin = async (req: Request, res: Response, next: NextFunction) => {
+  const userId = req.headers['user-id'] as string;
+  if (!userId) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+  
+  try {
+    const user = await storage.getUser(parseInt(userId));
+    if (!user || user.role !== 'admin') {
+      return res.status(403).json({ message: "Access denied. Admin permission required." });
+    }
+    next();
+  } catch (error) {
+    return res.status(500).json({ message: "Server error" });
+  }
+};
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Initialize with some sample users
   await initializeSampleData();
 
   // Auth routes
+  app.post("/api/auth/register", async (req: Request, res: Response) => {
+    try {
+      const validated = registerUserSchema.parse(req.body);
+      
+      // Check if the email is already registered
+      const existingUserByEmail = await storage.getUserByEmail(validated.email);
+      if (existingUserByEmail) {
+        return res.status(400).json({ message: "Email already in use" });
+      }
+      
+      // Check if the username is already taken
+      const existingUserByUsername = await storage.getUserByUsername(validated.username);
+      if (existingUserByUsername) {
+        return res.status(400).json({ message: "Username already taken" });
+      }
+      
+      // Create a new user
+      const newUser = await storage.createUser({
+        ...validated,
+        role: 'user' // Default role is 'user'
+      });
+      
+      // Return user data (excluding password)
+      return res.status(201).json({
+        id: newUser.id,
+        username: newUser.username,
+        email: newUser.email,
+        name: newUser.name,
+        role: newUser.role
+      });
+    } catch (error) {
+      if (error instanceof ZodError) {
+        return res.status(400).json({ message: fromZodError(error).message });
+      }
+      return res.status(500).json({ message: "Server error" });
+    }
+  });
+  
+  app.post("/api/auth/google", async (req: Request, res: Response) => {
+    try {
+      // In a real app, you would validate the Google token
+      // For this prototype, we'll just check if the user exists by their Google ID
+      // or create a new user if they don't
+      const { googleId, email, name, profilePicture } = req.body;
+      
+      if (!googleId || !email || !name) {
+        return res.status(400).json({ message: "Invalid Google auth data" });
+      }
+      
+      let user = await storage.getUserByGoogleId(googleId);
+      
+      if (!user) {
+        // User doesn't exist, create a new one
+        // Generate a random username based on the email
+        const username = email.split('@')[0] + Math.floor(Math.random() * 1000);
+        
+        user = await storage.createUser({
+          username,
+          email,
+          name,
+          password: Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2), // Random password
+          googleId,
+          profilePicture,
+          role: 'user'
+        });
+      }
+      
+      return res.status(200).json({
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        username: user.username,
+        role: user.role,
+        profilePicture: user.profilePicture
+      });
+    } catch (error) {
+      return res.status(500).json({ message: "Failed to authenticate with Google" });
+    }
+  });
+  
+  // Admin routes for user management
+  app.get("/api/admin/users", isAdmin, async (req: Request, res: Response) => {
+    try {
+      const users = await storage.getAllUsers();
+      // Don't return passwords in the response
+      const safeUsers = users.map(user => ({
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        googleId: user.googleId ? true : false, // Just indicate if connected to Google
+        createdAt: user.createdAt
+      }));
+      
+      return res.status(200).json(safeUsers);
+    } catch (error) {
+      return res.status(500).json({ message: "Failed to fetch users" });
+    }
+  });
+  
+  app.put("/api/admin/users/:id", isAdmin, async (req: Request, res: Response) => {
+    try {
+      const userId = parseInt(req.params.id);
+      if (isNaN(userId)) {
+        return res.status(400).json({ message: "Invalid user ID" });
+      }
+      
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // Validate update fields - only allow limited fields to be updated by admin
+      const { role, name } = req.body;
+      
+      const updatedUser = await storage.updateUser(userId, {
+        role,
+        name
+      });
+      
+      if (!updatedUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      return res.status(200).json({
+        id: updatedUser.id,
+        username: updatedUser.username,
+        email: updatedUser.email,
+        name: updatedUser.name,
+        role: updatedUser.role
+      });
+    } catch (error) {
+      return res.status(500).json({ message: "Failed to update user" });
+    }
+  });
+  
+  app.delete("/api/admin/users/:id", isAdmin, async (req: Request, res: Response) => {
+    try {
+      const userId = parseInt(req.params.id);
+      if (isNaN(userId)) {
+        return res.status(400).json({ message: "Invalid user ID" });
+      }
+      
+      // Don't allow deleting yourself
+      const adminId = parseInt(req.headers['user-id'] as string);
+      if (userId === adminId) {
+        return res.status(400).json({ message: "You cannot delete your own account" });
+      }
+      
+      const success = await storage.deleteUser(userId);
+      
+      if (!success) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      return res.status(200).json({ message: "User deleted successfully" });
+    } catch (error) {
+      return res.status(500).json({ message: "Failed to delete user" });
+    }
+  });
+
   app.post("/api/auth/login", async (req: Request, res: Response) => {
     try {
       const validated = loginUserSchema.parse(req.body);
@@ -26,7 +211,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         id: user.id,
         email: user.email,
         name: user.name || "User",
-        username: user.username
+        username: user.username,
+        role: user.role,
+        profilePicture: user.profilePicture
       });
     } catch (error) {
       if (error instanceof ZodError) {
@@ -137,7 +324,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
 // Initialize some sample data for the prototype
 async function initializeSampleData() {
   try {
-    // Add a sample user if none exists
+    // Add a sample admin user if none exists
+    const existingAdmin = await storage.getUserByEmail("admin@example.com");
+    
+    if (!existingAdmin) {
+      await storage.createUser({
+        username: "admin",
+        password: "admin123",
+        email: "admin@example.com",
+        name: "Admin User",
+        role: "admin"
+      });
+    }
+    
+    // Add a sample regular user if none exists
     const existingUser = await storage.getUserByEmail("user@example.com");
     
     if (!existingUser) {
@@ -145,7 +345,8 @@ async function initializeSampleData() {
         username: "user",
         password: "password",
         email: "user@example.com",
-        name: "John Doe"
+        name: "John Doe",
+        role: "user"
       });
       
       // Add sample tasks for this user
