@@ -25,12 +25,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   });
 
   useEffect(() => {
-    if (user) {
-      localStorage.setItem("user", JSON.stringify(user));
-    } else {
-      localStorage.removeItem("user");
+    async function fetchUserFromSession() {
+      try {
+        const response = await fetch("http://localhost:5000/me", {
+          credentials: "include", // ESSENCIAL para usar o cookie da sessão
+        });
+  
+        if (response.ok) {
+          const data = await response.json();
+          // Ajusta para o formato que seu contexto espera
+          const userData: User = {
+            id: 0, // ou um valor que você decidir
+            email: data.user.email,
+            name: data.user.name,
+            username: data.user.email, // ou algo diferente se preferir
+            role: "user", // ou um valor retornado do backend
+            profilePicture: null,
+          };
+          setUser(userData);
+        }
+      } catch (err) {
+        console.error("Erro ao buscar sessão do usuário:", err);
+      }
     }
-  }, [user]);
+  
+    // Só busca se ainda não houver usuário no contexto
+    if (!user) {
+      fetchUserFromSession();
+    }
+  }, []);
+  
 
   const login = (userData: User) => {
     setUser(userData);

@@ -54,41 +54,11 @@ export function LoginForm() {
     }
   }
 
-  const handleGoogleSignIn = async () => {
+  const handleGoogleSignIn = () => {
     setIsGoogleLoading(true);
-    
-    try {
-      // In a real implementation, we would use the Google OAuth API
-      // For now, let's simulate a successful Google sign-in
-      toast({
-        title: "Google Sign-In Required",
-        description: "The Google sign-in feature requires Google API credentials.",
-      });
-      
-      // Simulated Google Auth response (this would come from Google in a real implementation)
-      // const googleAuthResponse = {
-      //   googleId: "google123456789",
-      //   email: "googleuser@example.com",
-      //   name: "Google User",
-      //   profilePicture: "https://example.com/profile.jpg"
-      // };
-      
-      // // Call our backend with Google data
-      // const response = await apiRequest("POST", "/api/auth/google", googleAuthResponse);
-      // const userData = await response.json();
-      // login(userData);
-      // setLocation("/dashboard");
-    } catch (error) {
-      console.error("Google sign-in error:", error);
-      toast({
-        variant: "destructive",
-        title: "Google Sign-In Failed",
-        description: error instanceof Error ? error.message : "Unable to sign in with Google. Please try again.",
-      });
-    } finally {
-      setIsGoogleLoading(false);
-    }
+    window.location.href = "http://localhost:5000/auth/google";
   };
+  
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4 bg-gray-50">
