@@ -46,7 +46,7 @@ export const tasks = pgTable("tasks", {
   title: text("title").notNull(),
   description: text("description"),
   priority: text("priority").notNull(), // high, medium, low
-  dueDate: text("due_date").notNull(),
+  dueDate: text("dueDate").notNull(),
   tag: text("tag").notNull(), // Work, Personal, Urgent, Shopping
   completed: boolean("completed").notNull().default(false),
   userId: integer("user_id").notNull(),
