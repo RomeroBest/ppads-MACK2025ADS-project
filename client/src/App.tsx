@@ -8,6 +8,8 @@ import RegisterPage from "@/pages/register-page";
 import Dashboard from "@/pages/dashboard";
 import AdminPage from "@/pages/admin-page";
 import { AuthProvider } from "@/context/auth-context";
+import LoginSuccessPage from "@/pages/LoginSuccessPage"; // ajuste se necessário
+
 
 function Router() {
   return (
@@ -16,6 +18,7 @@ function Router() {
       <Route path="/register" component={RegisterPage} />
       <Route path="/dashboard" component={Dashboard} />
       <Route path="/admin" component={AdminPage} />
+      <Route path="/login-success" component={LoginSuccessPage} /> {/* ✅ ESTA LINHA */}
       <Route component={NotFound} />
     </Switch>
   );
@@ -31,5 +34,7 @@ function App() {
     </QueryClientProvider>
   );
 }
+
+<Route path="/login-success" component={LoginSuccessPage} />
 
 export default App;

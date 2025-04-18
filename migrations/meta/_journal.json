@@ -1,0 +1,13 @@
+{
+  "version": "7",
+  "dialect": "mysql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "5",
+      "when": 1745008161848,
+      "tag": "0000_blushing_sabra",
+      "breakpoints": true
+    }
+  ]
+}

@@ -1,5 +1,6 @@
 import { InsertTask, InsertUser, Task, TaskFormValues, User } from "@shared/schema";
 
+
 export interface IStorage {
   // User operations
   getUser(id: number): Promise<User | undefined>;
@@ -44,10 +45,9 @@ export class MemStorage implements IStorage {
   }
 
   async getUserByEmail(email: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.email === email,
-    );
+    return Array.from(this.users.values()).find(user => user.email === email);
   }
+  
   
   async getUserByGoogleId(googleId: string): Promise<User | undefined> {
     return Array.from(this.users.values()).find(
@@ -68,6 +68,7 @@ export class MemStorage implements IStorage {
     const updatedUser: User = {
       ...user,
       ...userData,
+      username: userData.username ?? user.username, // Garantir que o username seja mantido ou atualizado corretamente
     };
 
     this.users.set(id, updatedUser);
@@ -75,18 +76,25 @@ export class MemStorage implements IStorage {
   }
 
   async deleteUser(id: number): Promise<boolean> {
-    if (!this.users.has(id)) {
+    const parsedId = Number(id);
+    console.log("IDs existentes:", Array.from(this.users.keys()));
+    console.log("Tentando deletar o ID:", parsedId);
+  
+    if (!this.users.has(parsedId)) {
+      console.log("Usuário não encontrado para exclusão.");
       return false;
     }
-    
-    // Also delete all tasks for this user
-    const userTasks = await this.getTasksByUserId(id);
+  
+    // Exclui tarefas associadas
+    const userTasks = await this.getTasksByUserId(parsedId);
     for (const task of userTasks) {
       await this.deleteTask(task.id);
     }
-    
-    return this.users.delete(id);
+  
+    return this.users.delete(parsedId);
   }
+  
+  
 
   async createUser(insertUser: InsertUser): Promise<User> {
     const id = this.userId++;
@@ -98,7 +106,9 @@ export class MemStorage implements IStorage {
       role: insertUser.role || 'user',
       googleId: insertUser.googleId || null,
       profilePicture: insertUser.profilePicture || null,
-      name: insertUser.name || null
+      name: insertUser.name || null,
+      username: insertUser.username || `user${id}`, // Garantir que o campo username esteja presente
+      status: "active", // ✅ incluído para satisfazer o tipo User
     };
     this.users.set(id, user);
     return user;
@@ -118,11 +128,18 @@ export class MemStorage implements IStorage {
   async createTask(insertTask: InsertTask): Promise<Task> {
     const id = this.taskId++;
     const now = new Date();
-    const task: Task = { 
-      ...insertTask, 
+    const task: Task = {
       id,
-      createdAt: now
+      createdAt: now,
+      title: insertTask.title,
+      priority: insertTask.priority,
+      dueDate: insertTask.dueDate,
+      tag: insertTask.tag,
+      userId: insertTask.userId,
+      description: insertTask.description ?? null,
+      completed: insertTask.completed ?? false,
     };
+    
     this.tasks.set(id, task);
     return task;
   }

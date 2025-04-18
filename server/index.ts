@@ -8,48 +8,30 @@ import { setupVite, serveStatic, log } from "./vite";
 import session from "express-session";
 import passport from "passport";
 import { Strategy as GoogleStrategy } from "passport-google-oauth20";
-import { db } from "./db"; // importar sua conexão
+import { db } from "./db";
 import tasksRouter from "./routes/tasks";
-
-
-// Array simples para armazenar os usuários
-const users: Array<{
-  googleId: string;
-  email: string | null;
-  name: string;
-}> = [];
+import cookieParser from "cookie-parser";
+import { generateToken } from "./utils/jwt";
+import { adminRouter } from "./routes/admin";
+import { eq } from "drizzle-orm";
+import { users } from "@shared/schema";
 
 
 const app = express();
 
+app.use(cors({
+  origin: "http://localhost:5000",
+  credentials: true
+}));
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-
-app.use("/api/tasks", tasksRouter);
-
-// 4. CORS – habilita comunicação entre frontend e backend
-app.use(cors({
-  origin: "http://localhost:5000", // seu frontend React
-  credentials: true                // permite cookies de sessão
-}));
-app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
-
-app.use(session({
-  secret: "alguma_chave_secreta", // você pode gerar uma frase aleatória
-  resave: false,
-  saveUninitialized: false,
-  cookie: {
-    httpOnly: true,
-    secure: false, // use true se for https
-    maxAge: 1000 * 60 * 60 * 24, // 1 dia de sessão
-  }
-}));
-
+app.use(cookieParser());
 
 app.use(passport.initialize());
-app.use(passport.session());
 
+app.use("/api/tasks", tasksRouter);
+app.use("/api/admin", adminRouter);
 
 app.use((req, res, next) => {
   const start = Date.now();
@@ -81,92 +63,63 @@ app.use((req, res, next) => {
   next();
 });
 
-import { db } from "./db"; // importar sua conexão
-
 passport.use(new GoogleStrategy({
   clientID: process.env.GOOGLE_CLIENT_ID!,
   clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
   callbackURL: process.env.GOOGLE_CALLBACK_URL!,
-}, async (accessToken, refreshToken, profile, done) => {
+}, async (_accessToken, _refreshToken, profile, done) => {
   try {
-    const [rows]: any = await db.query(
-      "SELECT * FROM users WHERE google_id = ?",
-      [profile.id]
-    );
+    const existingUser = await db.select().from(users).where(eq(users.googleId, profile.id)).then(rows => rows[0]);
 
-    let user = rows[0];
-
-    if (!user) {
-      const [result] = await db.query(
-        "INSERT INTO users (google_id, name, email, profile_picture) VALUES (?, ?, ?, ?)",
-        [
-          profile.id,
-          profile.displayName,
-          profile.emails?.[0]?.value || "",
-          profile.photos?.[0]?.value || null,
-        ]
-      );
-
-      user = {
-        id: result.insertId,
-        google_id: profile.id,
-        name: profile.displayName,
-        email: profile.emails?.[0]?.value || "",
-        profile_picture: profile.photos?.[0]?.value || null,
-      };
+    if (existingUser) {
+      return done(null, existingUser);
     }
 
-    return done(null, user);
+    const username = profile.emails?.[0]?.value?.split("@")[0] || `user_${Date.now()}`;
+    const email = profile.emails?.[0]?.value || "";
+    const profilePicture = profile.photos?.[0]?.value || null;
+
+    // Faz inserção
+    await db.insert(users).values({
+      googleId: profile.id,
+      name: profile.displayName,
+      email,
+      profilePicture,
+      username,
+      password: Math.random().toString(36).slice(2),
+    });
+
+    // Reconsulta o usuário após inserção
+    const newUser = await db.select().from(users).where(eq(users.googleId, profile.id)).then(rows => rows[0]);
+
+    return done(null, newUser);
   } catch (error) {
     console.error("Erro ao autenticar com Google:", error);
-    return done(error, null);
+    return done(error as Error, false);
   }
 }));
-
-
-
-passport.serializeUser((user: any, done) => {
-  done(null, user.google_id);
-});
-
-passport.deserializeUser(async (googleId, done) => {
-  const [rows]: any = await db.query(
-    "SELECT * FROM users WHERE google_id = ?",
-    [googleId]
-  );
-  const user = rows[0];
-  done(null, user || null);
-});
-
 
 
 app.get("/auth/google",
   passport.authenticate("google", { scope: ["profile", "email"] })
 );
 
-app.get('/auth/google/callback',
-  passport.authenticate('google', { failureRedirect: '/' }),
-  (req, res) => {
-    // Redireciona para o dashboard após o login bem-sucedido
-    res.redirect('http://localhost:5000/dashboard');
+app.get("/auth/google/callback",
+  passport.authenticate("google", { session: false, failureRedirect: "/" }),
+  (req: any, res) => {
+    const user = req.user;
+
+    const token = generateToken({
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+      username: user.username,
+    });
+
+    res.redirect(`http://localhost:5000/login-success?token=${token}`);
   }
 );
-
-app.get("/me", (req, res) => {
-  if (!req.user) {
-    return res.status(401).json({ error: "Usuário não autenticado" });
-  }
-
-  res.json({ user: req.user });
-});
-
-
-
-app.get("/me", (req, res) => {
-  if (!req.user) return res.status(401).json({ error: "Não autenticado" });
-  res.json(req.user);
-});
-
 
 (async () => {
   const server = await registerRoutes(app);
@@ -179,18 +132,12 @@ app.get("/me", (req, res) => {
     throw err;
   });
 
-  // importantly only setup vite in development and after
-  // setting up all the other routes so the catch-all route
-  // doesn't interfere with the other routes
   if (app.get("env") === "development") {
     await setupVite(app, server);
   } else {
     serveStatic(app);
   }
 
-  // ALWAYS serve the app on port 5000
-  // this serves both the API and the client.
-  // It is the only port that is not firewalled.
   const port = 5000;
   server.listen({
     port,

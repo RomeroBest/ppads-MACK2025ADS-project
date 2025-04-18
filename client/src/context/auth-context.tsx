@@ -1,4 +1,6 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { jwtDecode } from "jwt-decode";
+
 
 interface User {
   id: number;
@@ -25,40 +27,47 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   });
 
   useEffect(() => {
-    async function fetchUserFromSession() {
-      try {
-        const response = await fetch("http://localhost:5000/me", {
-          credentials: "include", // ESSENCIAL para usar o cookie da sessão
-        });
-  
-        if (response.ok) {
-          const data = await response.json();
-          // Ajusta para o formato que seu contexto espera
-          const userData: User = {
-            id: 0, // ou um valor que você decidir
-            email: data.user.email,
-            name: data.user.name,
-            username: data.user.email, // ou algo diferente se preferir
-            role: "user", // ou um valor retornado do backend
-            profilePicture: null,
-          };
-          setUser(userData);
-        }
-      } catch (err) {
-        console.error("Erro ao buscar sessão do usuário:", err);
+    // Captura token da URL (ex: /login-success?token=...)
+      const params = new URLSearchParams(window.location.search);
+      const tokenFromUrl = params.get("token");
+
+      if (tokenFromUrl) {
+        localStorage.setItem("authToken", tokenFromUrl);
+        // Limpa a URL
+        window.history.replaceState({}, "", window.location.pathname);
       }
-    }
+
+      const token = tokenFromUrl || localStorage.getItem("authToken");
+      if (!token) return;
   
-    // Só busca se ainda não houver usuário no contexto
-    if (!user) {
-      fetchUserFromSession();
+    try {
+      const decoded: any = jwtDecode(token);
+  
+      const userData: User = {
+        id: decoded.id,
+        email: decoded.email,
+        name: decoded.name,
+        username: decoded.username,
+        role: decoded.role,
+        profilePicture: null, // ajuste conforme necessário
+      };
+  
+      setUser(userData);
+    } catch (err) {
+      console.error("Token inválido:", err);
+      localStorage.removeItem("authToken");
     }
   }, []);
   
+  
 
-  const login = (userData: User) => {
+  const login = (userData: User, token?: string) => {
     setUser(userData);
+    if (token) {
+      localStorage.setItem("authToken", token);
+    }
   };
+  
 
   const logout = () => {
     setUser(null);

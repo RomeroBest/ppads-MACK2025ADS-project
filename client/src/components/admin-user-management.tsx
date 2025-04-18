@@ -64,14 +64,23 @@ export function AdminUserManagement() {
   const [editName, setEditName] = useState("");
   const [editEmail, setEditEmail] = useState("");
   const [editRole, setEditRole] = useState("");
+  const [editUsername, setEditUsername] = useState("");
+
 
   const { data: users = [], isLoading } = useQuery<User[]>({
     queryKey: ["/api/admin/users"],
+    queryFn: async () => {
+      const res = await apiRequest("GET", "/api/admin/users");
+      return res.json();
+    },
     enabled: !!currentUser?.id && currentUser.role === "admin",
   });
+  console.log("USUÁRIOS DO ADMIN:", users);
+
+  
 
   const updateUserMutation = useMutation({
-    mutationFn: async (userData: { id: number; name?: string; email?: string; role?: string }) => {
+    mutationFn: async (userData: { id: number; name?: string; username?: string; email?: string; role?: string }) => {
       const response = await apiRequest("PUT", `/api/admin/users/${userData.id}`, userData);
       return response.json();
     },
@@ -116,12 +125,14 @@ export function AdminUserManagement() {
   const handleEditUser = (user: User) => {
     setUserToEdit(user);
     setEditName(user.name);
+    setEditUsername(user.username);
     setEditEmail(user.email);
     setEditRole(user.role);
     setEditDialogOpen(true);
   };
 
   const handleDeleteUser = (userId: number) => {
+    console.log("Tentando deletar usuário com ID:", userId); // ✅
     setUserToDelete(userId);
     setDeleteDialogOpen(true);
   };
@@ -129,11 +140,12 @@ export function AdminUserManagement() {
   const handleUpdateUser = () => {
     if (!userToEdit) return;
 
-    const updatedFields: { id: number; name?: string; email?: string; role?: string } = {
+    const updatedFields: { id: number; name?: string; username?: string; email?: string; role?: string } = {
       id: userToEdit.id,
     };
 
     if (editName !== userToEdit.name) updatedFields.name = editName;
+    if (editUsername !== userToEdit.username) updatedFields.username = editUsername;
     if (editEmail !== userToEdit.email) updatedFields.email = editEmail;
     if (editRole !== userToEdit.role) updatedFields.role = editRole;
 
@@ -141,6 +153,7 @@ export function AdminUserManagement() {
   };
 
   const handleConfirmDelete = () => {
+    console.log("Confirmando exclusão do usuário:", userToDelete); // ✅
     if (userToDelete !== null) {
       deleteUserMutation.mutate(userToDelete);
     }
@@ -236,6 +249,14 @@ export function AdminUserManagement() {
                 id="name"
                 value={editName}
                 onChange={(e) => setEditName(e.target.value)}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="username">Username</Label>
+              <Input
+                id="username"
+                value={editUsername}
+                onChange={(e) => setEditUsername(e.target.value)}
               />
             </div>
             <div className="grid gap-2">

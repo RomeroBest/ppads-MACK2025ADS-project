@@ -10,6 +10,12 @@ import {
 import { z } from "zod";
 import { ZodError } from "zod";
 import { fromZodError } from "zod-validation-error";
+import { adminRouter } from "./routes/admin";
+import tasksRouter from "./routes/tasks";
+import { authRouter } from "./routes/auth";
+import { generateToken } from "./utils/jwt";
+import { verifyToken } from "./middlewares/verifyToken"; // Import verifyToken middleware
+
 
 // Simple middleware to check if user is admin
 const isAdmin = async (req: Request, res: Response, next: NextFunction) => {
@@ -31,38 +37,38 @@ const isAdmin = async (req: Request, res: Response, next: NextFunction) => {
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Initialize with some sample users
-  await initializeSampleData();
+  //await initializeSampleData();
+
+  app.use("/api/auth", authRouter);      // ✅ Novo
+  app.use("/api/admin", adminRouter); // agora /api/admin/users funciona!
+  app.use("/api/tasks", tasksRouter);
 
   // Auth routes
   app.post("/api/auth/register", async (req: Request, res: Response) => {
     try {
       const validated = registerUserSchema.parse(req.body);
-      
-      // Check if the email is already registered
+
       const existingUserByEmail = await storage.getUserByEmail(validated.email);
       if (existingUserByEmail) {
         return res.status(400).json({ message: "Email already in use" });
       }
-      
-      // Check if the username is already taken
+
       const existingUserByUsername = await storage.getUserByUsername(validated.username);
       if (existingUserByUsername) {
         return res.status(400).json({ message: "Username already taken" });
       }
-      
-      // Create a new user
+
       const newUser = await storage.createUser({
         ...validated,
-        role: 'user' // Default role is 'user'
+        role: "user",
       });
-      
-      // Return user data (excluding password)
+
       return res.status(201).json({
         id: newUser.id,
         username: newUser.username,
         email: newUser.email,
         name: newUser.name,
-        role: newUser.role
+        role: newUser.role,
       });
     } catch (error) {
       if (error instanceof ZodError) {
@@ -115,9 +121,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Admin routes for user management
-  app.get("/api/admin/users", isAdmin, async (req: Request, res: Response) => {
+  app.get("/api/admin/users", verifyToken, isAdmin, async (req, res) => {
     try {
       const users = await storage.getAllUsers();
+      console.log("Usuários existentes após inicialização:", users.map(u => u.id));
       // Don't return passwords in the response
       const safeUsers = users.map(user => ({
         id: user.id,
@@ -152,7 +159,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const updatedUser = await storage.updateUser(userId, {
         role,
-        name
+        name,
       });
       
       if (!updatedUser) {
@@ -171,49 +178,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.delete("/api/admin/users/:id", isAdmin, async (req: Request, res: Response) => {
+  app.delete("/api/admin/users/:id", verifyToken, isAdmin, async (req: Request, res: Response) => {
     try {
       const userId = parseInt(req.params.id);
       if (isNaN(userId)) {
         return res.status(400).json({ message: "Invalid user ID" });
       }
+  
       
-      // Don't allow deleting yourself
-      const adminId = parseInt(req.headers['user-id'] as string);
+      const adminId = (req.user as { id: number }).id;
       if (userId === adminId) {
         return res.status(400).json({ message: "You cannot delete your own account" });
       }
-      
+  
       const success = await storage.deleteUser(userId);
-      
+  
       if (!success) {
         return res.status(404).json({ message: "User not found" });
       }
-      
+  
       return res.status(200).json({ message: "User deleted successfully" });
     } catch (error) {
       return res.status(500).json({ message: "Failed to delete user" });
     }
   });
+  
 
   app.post("/api/auth/login", async (req: Request, res: Response) => {
     try {
       const validated = loginUserSchema.parse(req.body);
       const user = await storage.getUserByEmail(validated.email);
-      
+  
       if (!user || user.password !== validated.password) {
         return res.status(401).json({ message: "Invalid email or password" });
       }
-      
-      // In a real app, you'd set up sessions and use proper authentication
-      // For this prototype, we'll just return the user info
-      return res.status(200).json({
+  
+      // ✅ Gera token JWT com as infos necessárias
+      const token = generateToken({
         id: user.id,
         email: user.email,
-        name: user.name || "User",
-        username: user.username,
-        role: user.role,
-        profilePicture: user.profilePicture
+        name: user.name,
+        role: user.role as "user" | "admin",
+        username: user.username, // ✅ importante
+      });
+      
+  
+      // Retorna o token e os dados básicos do usuário
+      return res.status(200).json({
+        token,
+        user: {
+          id: user.id,
+          email: user.email,
+          name: user.name || "User",
+          username: user.username,
+          role: user.role,
+          profilePicture: user.profilePicture,
+        },
       });
     } catch (error) {
       if (error instanceof ZodError) {
@@ -222,6 +242,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(500).json({ message: "Server error" });
     }
   });
+  
 
   // Task CRUD operations
   app.get("/api/tasks", async (req: Request, res: Response) => {
@@ -306,10 +327,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Task not found" });
       }
       
+      const allowedTags = ["Work", "Personal", "Urgent", "Shopping"] as const;
+
+      if (!allowedTags.includes(task.tag as any)) {
+        return res.status(400).json({ message: "Invalid tag value" });
+      }
+      
       const updatedTask = await storage.updateTask(taskId, {
-        ...task,
-        completed: !task.completed
+        title: task.title,
+        description: task.description ?? "", // trata null
+        priority: task.priority as "high" | "medium" | "low",
+        dueDate: task.dueDate,
+        tag: task.tag as "Work" | "Personal" | "Urgent" | "Shopping",
+        completed: !task.completed,
       });
+      
       
       return res.status(200).json(updatedTask);
     } catch (error) {

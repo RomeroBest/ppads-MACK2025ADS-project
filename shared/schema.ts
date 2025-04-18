@@ -1,17 +1,26 @@
-import { pgTable, text, serial, integer, boolean, timestamp } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
+import {
+  mysqlTable,
+  int,
+  varchar,
+  text as mysqlText,
+  datetime,
+  boolean
+} from "drizzle-orm/mysql-core";
+import { sql } from "drizzle-orm";
 
-export const users = pgTable("users", {
-  id: serial("id").primaryKey(),
-  username: text("username").notNull().unique(),
-  password: text("password").notNull(),
-  email: text("email").notNull().unique(),
-  name: text("name"),
-  role: text("role").notNull().default("user"), // New: 'admin' or 'user'
-  googleId: text("google_id").unique(), // New: for Google Auth
-  profilePicture: text("profile_picture"), // New: URL to profile picture
-  createdAt: timestamp("created_at").defaultNow(), // New: track when user was created
+// USERS TABLE - MySQL
+export const users = mysqlTable("users", {
+  id: int("id").primaryKey().autoincrement(),
+  googleId: varchar("google_id", { length: 255 }),
+  name: varchar("name", { length: 255 }),
+  username: varchar("username", { length: 255 }).notNull().unique(),
+  email: varchar("email", { length: 255 }).notNull(),
+  password: varchar("password", { length: 255 }),
+  role: varchar("role", { length: 10 }).default("user").notNull(),
+  profilePicture: mysqlText("profile_picture"),
+  createdAt: datetime("created_at").default(sql`CURRENT_TIMESTAMP`),
 });
 
 export const insertUserSchema = createInsertSchema(users).pick({
@@ -41,16 +50,17 @@ export type RegisterUserInput = z.infer<typeof registerUserSchema>;
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 
-export const tasks = pgTable("tasks", {
-  id: serial("id").primaryKey(),
-  title: text("title").notNull(),
-  description: text("description"),
-  priority: text("priority").notNull(), // high, medium, low
-  dueDate: text("dueDate").notNull(),
-  tag: text("tag").notNull(), // Work, Personal, Urgent, Shopping
+// TASKS TABLE - MySQL
+export const tasks = mysqlTable("tasks", {
+  id: int("id").primaryKey().autoincrement(),
+  title: varchar("title", { length: 255 }).notNull(),
+  description: mysqlText("description"),
+  priority: varchar("priority", { length: 10 }).notNull(),
+  dueDate: varchar("dueDate", { length: 50 }).notNull(),
+  tag: varchar("tag", { length: 50 }).notNull(),
   completed: boolean("completed").notNull().default(false),
-  userId: integer("user_id").notNull(),
-  createdAt: timestamp("created_at").defaultNow(),
+  userId: int("user_id").notNull(),
+  createdAt: datetime("created_at").default(sql`CURRENT_TIMESTAMP`),
 });
 
 export const insertTaskSchema = createInsertSchema(tasks).omit({
@@ -61,7 +71,6 @@ export const insertTaskSchema = createInsertSchema(tasks).omit({
 export type InsertTask = z.infer<typeof insertTaskSchema>;
 export type Task = typeof tasks.$inferSelect;
 
-// For frontend form validation
 export const taskFormSchema = z.object({
   title: z.string().min(1, "Title is required"),
   description: z.string().optional(),
@@ -74,7 +83,6 @@ export const taskFormSchema = z.object({
 
 export type TaskFormValues = z.infer<typeof taskFormSchema>;
 
-// TaskFilter type for filtering tasks
 export type TaskFilter = {
   status: "all" | "pending" | "completed";
   tag: string;

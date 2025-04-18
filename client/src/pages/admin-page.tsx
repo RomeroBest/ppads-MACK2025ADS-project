@@ -5,11 +5,11 @@ import { useAuth } from "@/context/auth-context";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Shield } from "lucide-react";
 
+
 export default function AdminPage() {
   const [, setLocation] = useLocation();
   const { user, isAdmin } = useAuth();
 
-  // Redirect non-admin users
   useEffect(() => {
     if (!user) {
       setLocation("/");
@@ -17,11 +17,12 @@ export default function AdminPage() {
       setLocation("/dashboard");
     }
   }, [user, isAdmin, setLocation]);
+  
 
   if (!user || !isAdmin) {
-    return null; // Will redirect due to useEffect
+    setLocation("/dashboard");
   }
-
+  
   return (
     <div className="container mx-auto p-4">
       <div className="flex items-center justify-between mb-8 pb-4 border-b">
