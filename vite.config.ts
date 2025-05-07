@@ -9,7 +9,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 export default defineConfig({
-  base: "./", // <-- ADICIONA ESTA LINHA
+  base: "./", // <-- ISSO É FUNDAMENTAL
   plugins: [
     react(),
     runtimeErrorOverlay(),
@@ -35,3 +35,4 @@ export default defineConfig({
     emptyOutDir: true,
   },
 });
+
