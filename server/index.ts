@@ -25,6 +25,9 @@ app.listen(PORT, () => {
   console.log(`Servidor rodando na porta ${5000}`);
 });
 
+app.use(cors({
+  origin: "https://taskflow-frontend.up.railway.app"
+}));
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
