@@ -85,6 +85,18 @@ npm install
 npm run dev
 ```
 
+### 5. Acesse a Aplicação
+Abra o navegador e acesse:
+
+```bash
+http://localhost:5173
+```
+
+📦 Tags de versões
+v1 - Final da Iteração 1 (entrega inicial)
+
+v2 - Final da Iteração 2 (com alterações e merge concluído)
+
 ---
 
 ## 🔐 Acesso Administrativo
