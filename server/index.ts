@@ -7,7 +7,6 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import session from "express-session";
 import passport from "passport";
-import "./auth/passport";
 import { Strategy as GoogleStrategy } from "passport-google-oauth20";
 import { db } from "./db";
 import tasksRouter from "./routes/tasks";
