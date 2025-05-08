@@ -132,7 +132,7 @@ app.get("/auth/google/callback",
       username: user.username,
     });
 
-    res.redirect(`http://localhost:5000/login-success?token=${token}`);
+    res.redirect(`https://tasktracker-api.onrender.com/login-success?token=${token}`);
   }
 );
 
