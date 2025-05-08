@@ -124,7 +124,8 @@ export class MemStorage implements IStorage {
       ...insertTask, 
       id,
       createdAt: now,
-      description: insertTask.description || null
+      description: insertTask.description || null,
+      completed: insertTask.completed || false
     };
     this.tasks.set(id, task);
     return task;
@@ -139,7 +140,7 @@ export class MemStorage implements IStorage {
     const updatedTask: Task = {
       ...task,
       title: taskUpdate.title,
-      description: taskUpdate.description || "",
+      description: taskUpdate.description || null,
       priority: taskUpdate.priority,
       dueDate: taskUpdate.dueDate,
       tag: taskUpdate.tag,
