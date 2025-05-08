@@ -144,9 +144,14 @@ passport.use(new GoogleStrategy({
     }
   );
   
-  app.get("*", (req, res) => {
+  app.use((req, res, next) => {
+    if (req.path.startsWith("/api") || req.path.startsWith("/auth")) {
+      return next();
+    }
+  
     res.sendFile(path.join(__dirname, "dist/public/index.html"));
   });
+
 
   
   if (app.get("env") === "development") {
