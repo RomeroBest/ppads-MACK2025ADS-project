@@ -13,8 +13,9 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { AlertCircle } from "lucide-react";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { ArrowLeft, AlertCircle } from "lucide-react";
+import { useLocation } from "wouter";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 
 // Password change schema
 const passwordSchema = z.object({
@@ -122,7 +123,17 @@ export default function SettingsPage() {
 
   return (
     <div className="container py-10">
-      <h1 className="text-3xl font-bold mb-6">Settings</h1>
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-3xl font-bold">Settings</h1>
+        <Button 
+          variant="outline" 
+          onClick={() => setLocation("/dashboard")}
+          className="flex items-center gap-2"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to Dashboard
+        </Button>
+      </div>
 
       <Tabs defaultValue="account" value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList className="grid grid-cols-3 w-full max-w-md">

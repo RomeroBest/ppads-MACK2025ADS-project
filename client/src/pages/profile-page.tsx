@@ -13,6 +13,8 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { ArrowLeft } from "lucide-react";
+import { useLocation } from "wouter";
 
 const profileFormSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -26,6 +28,7 @@ type ProfileFormValues = z.infer<typeof profileFormSchema>;
 export default function ProfilePage() {
   const { user, login } = useAuth();
   const { toast } = useToast();
+  const [_, setLocation] = useLocation();
   
   // Form setup
   const form = useForm<ProfileFormValues>({
@@ -97,7 +100,17 @@ export default function ProfilePage() {
 
   return (
     <div className="container py-10">
-      <h1 className="text-3xl font-bold mb-6">Your Profile</h1>
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-3xl font-bold">Your Profile</h1>
+        <Button 
+          variant="outline" 
+          onClick={() => setLocation("/dashboard")}
+          className="flex items-center gap-2"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to Dashboard
+        </Button>
+      </div>
       
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Profile Summary */}
