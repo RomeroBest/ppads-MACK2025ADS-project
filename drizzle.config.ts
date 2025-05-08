@@ -1,4 +1,6 @@
 import { defineConfig } from "drizzle-kit";
+import { mysqlTable, mysqlSchema } from "drizzle-orm/mysql-core";
+import { pgTable, pgSchema } from "drizzle-orm/pg-core";
 
 if (!process.env.DATABASE_URL) {
   throw new Error("DATABASE_URL is not set");
@@ -6,12 +8,8 @@ if (!process.env.DATABASE_URL) {
 
 export default defineConfig({
   schema: "./shared/schema.ts",
-  driver: "mysql2",
+  driver: "pg",
   dbCredentials: {
-    host: process.env.DB_HOST!,
-    port: Number(process.env.DB_PORT),
-    user: process.env.DB_USER!,
-    password: process.env.DB_PASS!,
-    database: process.env.DB_NAME!,
+    connectionString: process.env.DATABASE_URL!,
   },
 });
