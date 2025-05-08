@@ -27,10 +27,6 @@ app.use(express.static(path.join(__dirname, "dist/public")));
 
 const PORT = process.env.PORT || 5000;
 
-app.listen(process.env.PORT || 5000, () => {
-  console.log("Server running on port", process.env.PORT || 5000);
-});
-
 app.use(cors({
   origin: ["https://ppads-mack2025ads-project.onrender.com"],
   credentials: true
@@ -159,7 +155,7 @@ passport.use(new GoogleStrategy({
     serveStatic(app);
   }
 
-  const port = 5000;
+  const port = Number(process.env.PORT) || 5000;
   server.listen({
     port,
     host: "0.0.0.0",
