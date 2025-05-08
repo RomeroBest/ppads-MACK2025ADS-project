@@ -65,15 +65,9 @@ export default function SettingsPage() {
   // Password change mutation
   const changePasswordMutation = useMutation({
     mutationFn: async (passwordData: PasswordFormValues) => {
-      const response = await apiRequest(`/api/users/change-password`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          currentPassword: passwordData.currentPassword,
-          newPassword: passwordData.newPassword,
-        }),
+      const response = await apiRequest("POST", `/api/users/change-password`, {
+        currentPassword: passwordData.currentPassword,
+        newPassword: passwordData.newPassword,
       });
       return response;
     },
@@ -96,13 +90,7 @@ export default function SettingsPage() {
   // Notification settings mutation
   const updateNotificationsMutation = useMutation({
     mutationFn: async (notificationData: NotificationFormValues) => {
-      const response = await apiRequest(`/api/users/notifications`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(notificationData),
-      });
+      const response = await apiRequest("PUT", `/api/users/notifications`, notificationData);
       return response;
     },
     onSuccess: () => {

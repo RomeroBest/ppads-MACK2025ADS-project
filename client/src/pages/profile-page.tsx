@@ -52,13 +52,7 @@ export default function ProfilePage() {
 
   const updateProfileMutation = useMutation({
     mutationFn: async (profileData: ProfileFormValues) => {
-      const response = await apiRequest(`/api/users/profile`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(profileData),
-      });
+      const response = await apiRequest("PUT", `/api/users/profile`, profileData);
       return response;
     },
     onSuccess: (data) => {

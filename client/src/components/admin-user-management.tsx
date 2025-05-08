@@ -99,13 +99,7 @@ export function AdminUserManagement() {
 
   const updateUserMutation = useMutation({
     mutationFn: async (userData: { id: number; name?: string; email?: string; role?: string; permissions?: any }) => {
-      const response = await apiRequest(`/api/admin/users/${userData.id}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(userData),
-      });
+      const response = await apiRequest("PUT", `/api/admin/users/${userData.id}`, userData);
       return response;
     },
     onSuccess: () => {
@@ -128,9 +122,7 @@ export function AdminUserManagement() {
 
   const deleteUserMutation = useMutation({
     mutationFn: async (userId: number) => {
-      await apiRequest(`/api/admin/users/${userId}`, {
-        method: "DELETE",
-      });
+      await apiRequest("DELETE", `/api/admin/users/${userId}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });

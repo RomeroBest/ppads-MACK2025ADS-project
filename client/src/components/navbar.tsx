@@ -124,8 +124,12 @@ export function Navbar() {
                       Admin Dashboard
                     </DropdownMenuItem>
                   )}
-                  <DropdownMenuItem>Your Profile</DropdownMenuItem>
-                  <DropdownMenuItem>Settings</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setLocation("/profile")}>
+                    Your Profile
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setLocation("/settings")}>
+                    Settings
+                  </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleLogout}>
                     Sign out

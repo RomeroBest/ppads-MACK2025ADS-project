@@ -18,6 +18,8 @@ function Router() {
       <Route path="/register" component={RegisterPage} />
       <Route path="/dashboard" component={Dashboard} />
       <Route path="/admin" component={AdminPage} />
+      <Route path="/profile" component={ProfilePage} />
+      <Route path="/settings" component={SettingsPage} />
       <Route component={NotFound} />
     </Switch>
   );

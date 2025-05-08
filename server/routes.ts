@@ -316,6 +316,89 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(500).json({ message: "Failed to toggle task completion" });
     }
   });
+  
+  // Profile routes
+  app.put("/api/users/profile", async (req: Request, res: Response) => {
+    try {
+      const userId = parseInt(req.query.userId as string);
+      if (isNaN(userId)) {
+        return res.status(400).json({ message: "User ID is required" });
+      }
+      
+      const { name, email, username, profilePicture } = req.body;
+      const updatedUser = await storage.updateUser(userId, {
+        name,
+        email,
+        username,
+        profilePicture
+      });
+      
+      if (!updatedUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      res.json(updatedUser);
+    } catch (error) {
+      console.error("Error updating profile:", error);
+      res.status(500).json({ message: "Failed to update profile" });
+    }
+  });
+  
+  // Settings routes
+  app.post("/api/users/change-password", async (req: Request, res: Response) => {
+    try {
+      const userId = parseInt(req.query.userId as string);
+      if (isNaN(userId)) {
+        return res.status(400).json({ message: "User ID is required" });
+      }
+      
+      const { currentPassword, newPassword } = req.body;
+      
+      // In a real app, you would verify current password here
+      // and hash the new password before saving
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      if (user.password !== currentPassword) {
+        return res.status(400).json({ message: "Current password is incorrect" });
+      }
+      
+      await storage.updateUser(userId, {
+        password: newPassword // In a real app, this would be hashed
+      });
+      
+      res.json({ message: "Password changed successfully" });
+    } catch (error) {
+      console.error("Error changing password:", error);
+      res.status(500).json({ message: "Failed to change password" });
+    }
+  });
+  
+  app.put("/api/users/notifications", async (req: Request, res: Response) => {
+    try {
+      const userId = parseInt(req.query.userId as string);
+      if (isNaN(userId)) {
+        return res.status(400).json({ message: "User ID is required" });
+      }
+      
+      const { emailNotifications, taskReminders, systemUpdates } = req.body;
+      
+      // In a real app, this would update notification preferences in the database
+      // For now, we'll just return success
+      
+      res.json({ 
+        emailNotifications, 
+        taskReminders, 
+        systemUpdates,
+        message: "Notification preferences updated" 
+      });
+    } catch (error) {
+      console.error("Error updating notification settings:", error);
+      res.status(500).json({ message: "Failed to update notification settings" });
+    }
+  });
 
   const httpServer = createServer(app);
   return httpServer;
