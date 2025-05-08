@@ -113,35 +113,6 @@ passport.use(new GoogleStrategy({
 }));
 
 
-app.get("/auth/google",
-  passport.authenticate("google", { scope: ["profile", "email"] })
-);
-
-app.get(
-  "/auth/google/callback",
-  passport.authenticate("google", {
-    session: false,
-    failureRedirect: `${process.env.CLIENT_URL}/login`,
-  }),
-  (req: any, res) => {
-    const user = req.user as any;
-    const token = generateToken({
-      id: user.id,
-      email: user.email,
-      name: user.name,
-      role: user.role,
-      username: user.username,
-    });
-
-    res.redirect(`${process.env.CLIENT_URL}/login-success?token=${token}`);
-  }
-);
-
-app.get("*", (req, res) => {
-  res.sendFile(path.join(__dirname, "dist/public/index.html"));
-});
-
-
 (async () => {
   const server = await registerRoutes(app);
 
@@ -153,6 +124,35 @@ app.get("*", (req, res) => {
     throw err;
   });
 
+  app.get("/auth/google",
+    passport.authenticate("google", { scope: ["profile", "email"] })
+  );
+  
+  app.get(
+    "/auth/google/callback",
+    passport.authenticate("google", {
+      session: false,
+      failureRedirect: `${process.env.CLIENT_URL}/login`,
+    }),
+    (req: any, res) => {
+      const user = req.user as any;
+      const token = generateToken({
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        username: user.username,
+      });
+  
+      res.redirect(`${process.env.CLIENT_URL}/login-success?token=${token}`);
+    }
+  );
+  
+  app.get("*", (req, res) => {
+    res.sendFile(path.join(__dirname, "dist/public/index.html"));
+  });
+
+  
   if (app.get("env") === "development") {
     await setupVite(app, server);
   } else {
