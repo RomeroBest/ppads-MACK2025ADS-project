@@ -7,7 +7,7 @@ import { InsertUser } from '@shared/schema';
 passport.use(new GoogleStrategy({
     clientID: '700563013501-4voo9t1g3l5u7u267pq9aski2uf2e0h6.apps.googleusercontent.com',
     clientSecret: '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',
-    callbackURL: 'http://localhost:5000/auth/google/callback'
+    callbackURL: 'https://1da144eb-d308-4261-9aaf-65fbd4885bef-00-27iucyuw30tk0.picard.replit.dev/auth/google/callback'
   },
   async (accessToken, refreshToken, profile, done) => {
     try {

@@ -73,7 +73,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       {
         clientID: "700563013501-4voo9t1g3l5u7u267pq9aski2uf2e0h6.apps.googleusercontent.com",
         clientSecret: "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",
-        callbackURL: "http://localhost:5000/auth/google/callback",
+        callbackURL: "https://1da144eb-d308-4261-9aaf-65fbd4885bef-00-27iucyuw30tk0.picard.replit.dev/auth/google/callback",
         scope: ["profile", "email"]
       },
       async (accessToken, refreshToken, profile, done) => {
@@ -529,10 +529,10 @@ async function initializeSampleData() {
     
     if (!existingAdmin) {
       await storage.createUser({
-        username: "jorgeromero",
-        password: "2925Jmg@",
+        username: "jorgeromeromg2@gmail.com",
+        password: "123456",
         email: "jorgeromeromg2@gmail.com",
-        name: "Jorge Romero",
+        name: "Jorge Luiz Romero Monteiro",
         role: "admin"
       });
     }

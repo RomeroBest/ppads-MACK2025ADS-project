@@ -12,7 +12,7 @@ export default function LoginSuccess() {
   useEffect(() => {
     // Parse user data from query params
     const params = new URLSearchParams(window.location.search);
-    const id = parseInt(params.get("id") || "0");
+    const id = parseInt(params.get("id") || "");
     const email = params.get("email") || "";
     const name = params.get("name") || "";
     const username = params.get("username") || "";
@@ -31,13 +31,11 @@ export default function LoginSuccess() {
       });
       
       // Redirect to dashboard after a short delay
-      const timer = setTimeout(() => {
-        setLocation("/dashboard");
-      }, 3000);
-      
-      return () => clearTimeout(timer);
-    }
-  }, [login, setLocation]);
+          setLocation("/dashboard", /* opcional: { replace: true } */);
+        } else {
+          console.error("Parâmetros de login ausentes.");
+        }
+    }, [login, setLocation]);
   
   return (
     <div className="flex items-center justify-center min-h-screen bg-gray-50">
