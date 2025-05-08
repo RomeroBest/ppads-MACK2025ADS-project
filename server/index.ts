@@ -121,11 +121,14 @@ app.get("/auth/google",
   passport.authenticate("google", { scope: ["profile", "email"] })
 );
 
-app.get("/auth/google/callback",
-  passport.authenticate("google", { session: false, failureRedirect: "/" }),
+app.get(
+  "/auth/google/callback",
+  passport.authenticate("google", {
+    session: false,
+    failureRedirect: `${process.env.CLIENT_URL}/login`,
+  }),
   (req: any, res) => {
-    const user = req.user;
-
+    const user = req.user as any;
     const token = generateToken({
       id: user.id,
       email: user.email,
@@ -134,9 +137,10 @@ app.get("/auth/google/callback",
       username: user.username,
     });
 
-    res.redirect(`https://ppads-mack2025ads-api.onrender.com/login-success?token=${token}`);
+    res.redirect(`${process.env.CLIENT_URL}/login-success?token=${token}`);
   }
 );
+
 
 (async () => {
   const server = await registerRoutes(app);
