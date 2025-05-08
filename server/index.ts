@@ -36,7 +36,7 @@ app.listen(process.env.PORT || 5000, () => {
 });
 
 app.use(cors({
-  origin: "https://taskflow-frontend.up.railway.app"
+  origin: "https://ppads-mack2025ads-project.onrender.com/"
 }));
 
 app.use(express.json());
