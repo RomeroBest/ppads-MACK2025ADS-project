@@ -510,13 +510,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 async function initializeSampleData() {
   try {
     // Add a default admin user if none exists
-    const existingAdmin = await storage.getUserByEmail("jorgeromero@example.com");
+    const existingAdmin = await storage.getUserByEmail("jorgeromeromg2@gmail.com");
     
     if (!existingAdmin) {
       await storage.createUser({
         username: "jorgeromero",
         password: "2925Jmg@",
-        email: "jorgeromero@example.com",
+        email: "jorgeromeromg2@gmail.com",
         name: "Jorge Romero",
         role: "admin"
       });

@@ -1,10 +1,27 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import session from "express-session";
+import passport from "passport";
 
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+
+// Set up session
+app.use(session({
+  secret: "taskflow-secret-key", // In a real app, this would be an environment variable
+  resave: false,
+  saveUninitialized: false,
+  cookie: { 
+    secure: false, // Set to true if using HTTPS
+    maxAge: 24 * 60 * 60 * 1000 // 24 hours
+  }
+}));
+
+// Initialize passport
+app.use(passport.initialize());
+app.use(passport.session());
 
 app.use((req, res, next) => {
   const start = Date.now();
