@@ -10,6 +10,8 @@ import {
 import { z } from "zod";
 import { ZodError } from "zod";
 import { fromZodError } from "zod-validation-error";
+import passport from "passport";
+import { Strategy as GoogleStrategy } from "passport-google-oauth20";
 
 // Simple middleware to check if user is admin
 const isAdmin = async (req: Request, res: Response, next: NextFunction) => {
@@ -29,9 +31,75 @@ const isAdmin = async (req: Request, res: Response, next: NextFunction) => {
   }
 };
 
+// Passport configuration
+passport.serializeUser((user: any, done) => {
+  done(null, user.id);
+});
+
+passport.deserializeUser(async (id: number, done) => {
+  try {
+    const user = await storage.getUser(id);
+    done(null, user);
+  } catch (error) {
+    done(error, null);
+  }
+});
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Initialize with some sample users
   await initializeSampleData();
+  
+  // Initialize passport
+  app.use(passport.initialize());
+  
+  // Configure Google OAuth
+  passport.use(
+    new GoogleStrategy(
+      {
+        clientID: "700563013501-4voo9t1g3l5u7u267pq9aski2uf2e0h6.apps.googleusercontent.com",
+        clientSecret: "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",
+        callbackURL: "http://localhost:5000/auth/google/callback",
+        scope: ["profile", "email"]
+      },
+      async (accessToken, refreshToken, profile, done) => {
+        try {
+          // Check if user already exists by Google ID
+          let user = await storage.getUserByGoogleId(profile.id);
+          
+          if (!user) {
+            // Get email from profile
+            const email = profile.emails && profile.emails[0] ? profile.emails[0].value : "";
+            
+            // Check if the user exists by email
+            const userByEmail = await storage.getUserByEmail(email);
+            
+            if (userByEmail) {
+              // Update existing user with Google ID
+              user = await storage.updateUser(userByEmail.id, {
+                googleId: profile.id,
+                profilePicture: profile.photos && profile.photos[0] ? profile.photos[0].value : null
+              });
+            } else {
+              // Create a new user
+              user = await storage.createUser({
+                email,
+                name: profile.displayName || "",
+                username: `user_${profile.id.substring(0, 8)}`,
+                password: Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2), // Random password for Google users
+                googleId: profile.id,
+                profilePicture: profile.photos && profile.photos[0] ? profile.photos[0].value : null,
+                role: "user"
+              });
+            }
+          }
+          
+          done(null, user);
+        } catch (error) {
+          done(error as Error, undefined);
+        }
+      }
+    )
+  );
 
   // Auth routes
   app.post("/api/auth/register", async (req: Request, res: Response) => {
@@ -72,6 +140,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Google Auth routes
+  app.get('/auth/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
+
+  app.get(
+    '/auth/google/callback',
+    passport.authenticate('google', { session: false, failureRedirect: '/login' }),
+    (req, res) => {
+      // After successful authentication, return user data
+      const user = req.user as any;
+      
+      if (!user) {
+        return res.redirect('/login?error=auth_failed');
+      }
+      
+      // In a real app, you might create a JWT token here
+      // For now, we'll redirect to a page with user info in query params
+      return res.redirect(
+        `/login/success?id=${user.id}&email=${encodeURIComponent(
+          user.email
+        )}&name=${encodeURIComponent(user.name)}&username=${encodeURIComponent(
+          user.username
+        )}&role=${user.role}&profilePicture=${
+          user.profilePicture ? encodeURIComponent(user.profilePicture) : ''
+        }`
+      );
+    }
+  );
+
+  // Client-side Google auth API (for handling token from client-side flow)
   app.post("/api/auth/google", async (req: Request, res: Response) => {
     try {
       // In a real app, you would validate the Google token
