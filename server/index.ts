@@ -27,10 +27,6 @@ app.use(express.static(path.join(__dirname, "dist/public")));
 
 const PORT = process.env.PORT || 5000;
 
-app.get("*", (req, res) => {
-  res.sendFile(path.join(__dirname, "dist/public/index.html"));
-});
-
 app.listen(process.env.PORT || 5000, () => {
   console.log("Server running on port", process.env.PORT || 5000);
 });
@@ -140,6 +136,10 @@ app.get(
     res.redirect(`${process.env.CLIENT_URL}/login-success?token=${token}`);
   }
 );
+
+app.get("*", (req, res) => {
+  res.sendFile(path.join(__dirname, "dist/public/index.html"));
+});
 
 
 (async () => {
