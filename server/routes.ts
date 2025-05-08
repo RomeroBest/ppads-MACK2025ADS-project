@@ -52,7 +52,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Initialize passport
   app.use(passport.initialize());
   
-  // Configure Google OAuth
+  // Configure Google OAuth routes
+  app.get('/auth/google',
+    passport.authenticate('google', { scope: ['profile', 'email'] })
+  );
+
+  app.get('/auth/google/callback', 
+    passport.authenticate('google', { failureRedirect: '/' }),
+    function(req: Request, res: Response) {
+      // Successful authentication, redirect to login success page
+      if (req.user) {
+        res.redirect('/login/success');
+      } else {
+        res.redirect('/');
+      }
+    }
+  );
   passport.use(
     new GoogleStrategy(
       {
