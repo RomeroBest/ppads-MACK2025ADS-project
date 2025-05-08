@@ -36,7 +36,7 @@ app.listen(process.env.PORT || 5000, () => {
 });
 
 app.use(cors({
-  origin: ["http://localhost:5173", "https://ppads-mack2025ads-project.onrender.com"],
+  origin: ["https://ppads-mack2025ads-project.onrender.com"],
   credentials: true
 }));
 
