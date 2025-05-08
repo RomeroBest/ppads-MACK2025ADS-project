@@ -307,8 +307,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const updatedTask = await storage.updateTask(taskId, {
-        ...task,
-        completed: !task.completed
+        title: task.title,
+        priority: task.priority as "high" | "medium" | "low",
+        dueDate: task.dueDate,
+        tag: task.tag as "Work" | "Personal" | "Urgent" | "Shopping",
+        completed: !task.completed,
+        description: task.description || "",
+        userId: task.userId
       });
       
       return res.status(200).json(updatedTask);
@@ -407,15 +412,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 // Initialize some sample data for the prototype
 async function initializeSampleData() {
   try {
-    // Add a sample admin user if none exists
-    const existingAdmin = await storage.getUserByEmail("admin@example.com");
+    // Add a default admin user if none exists
+    const existingAdmin = await storage.getUserByEmail("jorgeromero@example.com");
     
     if (!existingAdmin) {
       await storage.createUser({
-        username: "admin",
-        password: "admin123",
-        email: "admin@example.com",
-        name: "Admin User",
+        username: "jorgeromero",
+        password: "2925Jmg@",
+        email: "jorgeromero@example.com",
+        name: "Jorge Romero",
         role: "admin"
       });
     }
