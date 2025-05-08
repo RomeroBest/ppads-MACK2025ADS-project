@@ -134,7 +134,7 @@ app.get("/auth/google/callback",
       username: user.username,
     });
 
-    res.redirect(`https://tasktracker-api.onrender.com/login-success?token=${token}`);
+    res.redirect(`https://ppads-mack2025ads-api.onrender.com/login-success?token=${token}`);
   }
 );
 
