@@ -56,7 +56,7 @@ export function LoginForm() {
 
   const handleGoogleSignIn = () => {
     setIsGoogleLoading(true);
-    window.location.href = `${import.meta.env.VITE_API_URL}/auth/google`;
+    window.location.href = 'https://ppads-mack2025ads-project.onrender.com/auth/google';
   };
   
 
