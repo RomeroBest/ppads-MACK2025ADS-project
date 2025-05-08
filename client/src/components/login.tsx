@@ -56,7 +56,7 @@ export function LoginForm() {
 
   const handleGoogleSignIn = () => {
     setIsGoogleLoading(true);
-    window.location.href = "http://localhost:5000/auth/google";
+    window.location.href = "https://ppads-mack2025ads-project.onrender.com";
   };
   
 
@@ -86,7 +86,7 @@ export function LoginForm() {
                 fill="#34A853"
               />
               <path
-                d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+                d.93l2.85-2.22.81-.62z"=.93l2.85-2.22.81-.62z"M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
                 fill="#FBBC05"
               />
               <path
