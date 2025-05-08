@@ -42,6 +42,7 @@ export default function SettingsPage() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("account");
+  const [_, setLocation] = useLocation();
 
   // Password change form
   const passwordForm = useForm<PasswordFormValues>({
@@ -182,7 +183,7 @@ export default function SettingsPage() {
               </Alert>
 
               <div className="flex justify-end">
-                <Button variant="outline" onClick={() => location.href = "/profile"}>
+                <Button variant="outline" onClick={() => setLocation("/profile")}>
                   Go to Profile
                 </Button>
               </div>
