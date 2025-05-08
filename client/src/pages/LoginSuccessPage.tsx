@@ -1,10 +1,9 @@
 // src/pages/LoginSuccess.tsx
 import { useEffect } from "react";
-import { useHistory, useLocation } from "wouter";
+import { useLocation } from "wouter";
 
 export default function LoginSuccess() {
-  const [, setLocation] = useHistory();
-  const [location] = useLocation();
+  const [, navigate] = useLocation(); // usamos só navigate
 
   useEffect(() => {
     const params = new URLSearchParams(location.split("?")[1]);
