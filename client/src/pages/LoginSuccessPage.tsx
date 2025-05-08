@@ -1,26 +1,21 @@
+// src/pages/LoginSuccess.tsx
 import { useEffect } from "react";
-import { useLocation } from "wouter";
+import { useHistory, useLocation } from "wouter";
 
-const LoginSuccessPage = () => {
-  const [, setLocation] = useLocation();
+export default function LoginSuccess() {
+  const [, setLocation] = useHistory();
+  const [location] = useLocation();
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
+    const params = new URLSearchParams(location.split("?")[1]);
     const token = params.get("token");
-
     if (token) {
       localStorage.setItem("authToken", token);
-      setLocation("/dashboard"); // redireciona após login
+      setLocation("/dashboard");
     } else {
-      setLocation("/"); // volta pro login se token inválido
+      setLocation("/login");
     }
   }, []);
 
-  return (
-    <div className="p-4 text-center">
-      <p>Logando com Google...</p>
-    </div>
-  );
-};
-
-export default LoginSuccessPage;
+  return <p>Redirecionando…</p>;
+}
