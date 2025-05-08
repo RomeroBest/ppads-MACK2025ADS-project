@@ -15,14 +15,24 @@ import { generateToken } from "./utils/jwt";
 import { adminRouter } from "./routes/admin";
 import { eq } from "drizzle-orm";
 import { users } from "@shared/schema";
+import path from "path";
+
 
 
 const app = express();
+const __dirname = path.resolve();
+
+
+app.use(express.static(path.join(__dirname, "dist/public")));
 
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, () => {
-  console.log(`Servidor rodando na porta ${5000}`);
+app.get("*", (req, res) => {
+  res.sendFile(path.join(__dirname, "dist/public/index.html"));
+});
+
+app.listen(process.env.PORT || 5000, () => {
+  console.log("Server running on port", process.env.PORT || 5000);
 });
 
 app.use(cors({
