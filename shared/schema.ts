@@ -1,26 +1,26 @@
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import {
-  mysqlTable,
-  int,
+  pgTable,
+  integer,
   varchar,
-  text as mysqlText,
-  datetime,
+  text,
+  timestamp,
   boolean
-} from "drizzle-orm/mysql-core";
+} from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 
-// USERS TABLE - MySQL
-export const users = mysqlTable("users", {
-  id: int("id").primaryKey().autoincrement(),
+// USERS TABLE - PostgreSQL
+export const users = pgTable("users", {
+  id: integer("id").primaryKey().default(sql`nextval('users_id_seq')`),
   googleId: varchar("google_id", { length: 255 }),
   name: varchar("name", { length: 255 }),
   username: varchar("username", { length: 255 }).notNull().unique(),
   email: varchar("email", { length: 255 }).notNull(),
   password: varchar("password", { length: 255 }),
   role: varchar("role", { length: 10 }).default("user").notNull(),
-  profilePicture: mysqlText("profile_picture"),
-  createdAt: datetime("created_at").default(sql`CURRENT_TIMESTAMP`),
+  profilePicture: text("profile_picture"),
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
 export const insertUserSchema = createInsertSchema(users).pick({
@@ -50,17 +50,17 @@ export type RegisterUserInput = z.infer<typeof registerUserSchema>;
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 
-// TASKS TABLE - MySQL
-export const tasks = mysqlTable("tasks", {
-  id: int("id").primaryKey().autoincrement(),
+// TASKS TABLE - PostgreSQL
+export const tasks = pgTable("tasks", {
+  id: integer("id").primaryKey().default(sql`nextval('tasks_id_seq')`),
   title: varchar("title", { length: 255 }).notNull(),
-  description: mysqlText("description"),
+  description: text("description"),
   priority: varchar("priority", { length: 10 }).notNull(),
   dueDate: varchar("dueDate", { length: 50 }).notNull(),
   tag: varchar("tag", { length: 50 }).notNull(),
   completed: boolean("completed").notNull().default(false),
-  userId: int("user_id").notNull(),
-  createdAt: datetime("created_at").default(sql`CURRENT_TIMESTAMP`),
+  userId: integer("user_id").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
 export const insertTaskSchema = createInsertSchema(tasks).omit({
