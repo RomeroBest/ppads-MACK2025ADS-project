@@ -7,6 +7,8 @@ import LoginPage from "@/pages/login-page";
 import RegisterPage from "@/pages/register-page";
 import Dashboard from "@/pages/dashboard";
 import AdminPage from "@/pages/admin-page";
+import ProfilePage from "@/pages/profile-page";
+import SettingsPage from "@/pages/settings-page";
 import { AuthProvider } from "@/context/auth-context";
 
 function Router() {
