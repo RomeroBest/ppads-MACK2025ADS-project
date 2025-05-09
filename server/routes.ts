@@ -12,23 +12,20 @@ import { ZodError } from "zod";
 import { fromZodError } from "zod-validation-error";
 import passport from "passport";
 import { Strategy as GoogleStrategy } from "passport-google-oauth20";
+import session from 'express-session';
+import { v4 as uuidv4 } from 'uuid';
 
 // Simple middleware to check if user is admin
 const isAdmin = async (req: Request, res: Response, next: NextFunction) => {
-  const userId = req.headers['user-id'] as string;
-  if (!userId) {
+  if (!req.isAuthenticated()) {
     return res.status(401).json({ message: "Unauthorized" });
   }
-  
-  try {
-    const user = await storage.getUser(parseInt(userId));
-    if (!user || user.role !== 'admin') {
-      return res.status(403).json({ message: "Access denied. Admin permission required." });
-    }
-    next();
-  } catch (error) {
-    return res.status(500).json({ message: "Server error" });
+
+  const user = req.user as any; // Assuming req.user is populated by Passport
+  if (!user || user.role !== 'admin') {
+    return res.status(403).json({ message: "Access denied. Admin permission required." });
   }
+  next();
 };
 
 // Passport configuration
@@ -39,9 +36,12 @@ passport.serializeUser((user: any, done) => {
 passport.deserializeUser(async (id: number, done) => {
   try {
     const user = await storage.getUser(id);
-    done(null, user);
+    if(user) {
+      return done(null, user);
+    }
+    return done(null, false);
   } catch (error) {
-    done(error, null);
+    return done(error, null);
   }
 });
 
@@ -49,47 +49,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Initialize with some sample users
   await initializeSampleData();
   
+  // Session configuration
+  app.use(session({
+    secret: process.env.SESSION_SECRET || uuidv4(), // Use a secure random string for session secret
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      secure: process.env.NODE_ENV === 'production', // Set to true in production for HTTPS
+      httpOnly: true, // Prevents client-side access to the cookie
+      maxAge: 24 * 60 * 60 * 1000 // Session expires after 24 hours
+    }
+  }));
+  
   // Initialize passport
   app.use(passport.initialize());
+  app.use(passport.session());
   
-  // Configure Google OAuth routes
-  app.get('/auth/google',
-    passport.authenticate('google', { scope: ['profile', 'email'] })
-  );
+  passport.use(
+    new GoogleStrategy(
+      {
+        clientID: process.env.GOOGLE_CLIENT_ID || "",
+        clientSecret: process.env.GOOGLE_CLIENT_SECRET || "",
+        callbackURL: "/auth/google/callback",
+      },
+      async (
+        accessToken: string,
+        refreshToken: string,
+        profile: any,
+        done: (error: Error | null, user?: any) => void
+      ) => {
+        try {
+          // Attempt to retrieve user by Google ID
+          let user = await storage.getUserByGoogleId(profile.id);
 
-  app.get('/auth/google/callback', 
-    passport.authenticate('google', { failureRedirect: '/' }),
-    function(req: Request, res: Response) {
-      // Successful authentication, redirect to login success page
-      if (req.user) {
-        res.redirect('/login/success');
-      } else {
-        res.redirect('/');
-      }
-    }
-  );
-  // Configure Google Strategy
-  passport.use(new GoogleStrategy({
-    clientID: process.env.GOOGLE_CLIENT_ID || '',
-    clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
-    callbackURL: "/auth/google/callback"
-  }, async (accessToken: string, refreshToken: string, profile: any, done: (error: Error | null, user?: any) => void) => {
-    try {
-      // Attempt to retrieve user by Google ID
-      let user = await storage.getUserByGoogleId(profile.id);
-
-      if (!user) {
+          if (!user) {
             // If Google ID doesn't exist, try to retrieve user by email
-            const email = profile.emails && profile.emails.length > 0 ? profile.emails[0].value : null;
+            const email =
+              profile.emails && profile.emails.length > 0
+                ? profile.emails[0].value
+                : null;
 
             if (email) {
               user = await storage.getUserByEmail(email);
 
               if (user) {
-                // If user exists with the same email, update the Google ID
+                // If user exists with the same email, update the Google ID and profile picture
                 user = await storage.updateUser(user.id, {
                   googleId: profile.id,
-                  profilePicture: profile.photos && profile.photos.length > 0 ? profile.photos[0].value : null,
+                  profilePicture:
+                    profile.photos && profile.photos.length > 0
+                      ? profile.photos[0].value
+                      : user.profilePicture || null, // Keep existing if Google doesn't provide
                 });
               } else {
                 // If email doesn't exist, create a new user with the Google profile data
@@ -98,10 +108,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   email,
                   username,
                   name: profile.displayName,
-                  password: Math.random().toString(36).slice(2), // Random password
+                  password: Math.random().toString(36).slice(2), // Random password - consider more robust generation
                   googleId: profile.id,
-                  profilePicture: profile.photos && profile.photos.length > 0 ? profile.photos[0].value : null,
-                  role: 'user',
+                  profilePicture:
+                    profile.photos && profile.photos.length > 0
+                      ? profile.photos[0].value
+                      : null,
+                  role: "user",
                 });
               }
             } else {
@@ -112,12 +125,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
           // User found or created successfully
           return done(null, user);
-        } catch (error) {
+        } catch (error: any) {
           // Handle errors during user retrieval or creation
-          return done(error as Error);
+          console.error("Google authentication error:", error);
+          return done(error);
         }
       }
     )
+  );
+  // Configure Google OAuth routes
+  app.get('/auth/google',
+    passport.authenticate('google', { scope: ['profile', 'email'] })
+  );
+
+  app.get('/auth/google/callback', 
+    passport.authenticate('google', { failureRedirect: '/login' }),
+    function(req: Request, res: Response) {
+      // Successful authentication, redirect to login success page
+      if (req.user) {
+        res.redirect('/login/success');
+      } else {
+        res.redirect('/');
+      }
+    }
+  );
 
   // Auth routes
   app.post("/api/auth/register", async (req: Request, res: Response) => {
@@ -163,26 +194,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get(
     '/auth/google/callback',
-    passport.authenticate('google', { session: false, failureRedirect: '/login' }),
-    (req, res) => {
+    passport.authenticate('google', { failureRedirect: '/login' }),
+    (req: Request, res: Response) => {
       // After successful authentication, return user data
       const user = req.user as any;
       
       if (!user) {
         return res.redirect('/login?error=auth_failed');
       }
-      
-      // In a real app, you might create a JWT token here
-      // For now, we'll redirect to a page with user info in query params
-      return res.redirect(
-        `/login/success?id=${user.id}&email=${encodeURIComponent(
-          user.email
-        )}&name=${encodeURIComponent(user.name)}&username=${encodeURIComponent(
-          user.username
-        )}&role=${user.role}&profilePicture=${
-          user.profilePicture ? encodeURIComponent(user.profilePicture) : ''
-        }`
-      );
+      req.login(user, (err) => {
+        if (err) {
+          console.error("Error during login:", err);
+          return res.status(500).json({ message: "Failed to login" });
+        }
+
+         // In a real app, you might create a JWT token here
+        // For now, we'll redirect to a page with user info in query params
+        return res.redirect(
+          `/login/success?id=${user.id}&email=${encodeURIComponent(
+            user.email
+          )}&name=${encodeURIComponent(user.name)}&username=${encodeURIComponent(
+            user.username
+          )}&role=${user.role}&profilePicture=${
+            user.profilePicture ? encodeURIComponent(user.profilePicture) : ''
+          }`
+        );
+      });
     }
   );
 
@@ -216,13 +253,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      return res.status(200).json({
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        username: user.username,
-        role: user.role,
-        profilePicture: user.profilePicture
+      req.login(user, (err) => {
+        if (err) {
+          console.error("Error during login:", err);
+          return res.status(500).json({ message: "Failed to login" });
+        }
+         // Return user data
+        return res.status(200).json({
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          username: user.username,
+          role: user.role,
+          profilePicture: user.profilePicture
+        });
       });
     } catch (error) {
       return res.status(500).json({ message: "Failed to authenticate with Google" });
@@ -294,7 +338,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Don't allow deleting yourself
-      const adminId = parseInt(req.headers['user-id'] as string);
+      const adminId = (req.user as any).id;
       if (userId === adminId) {
         return res.status(400).json({ message: "You cannot delete your own account" });
       }
@@ -320,15 +364,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: "Invalid email or password" });
       }
       
-      // In a real app, you'd set up sessions and use proper authentication
-      // For this prototype, we'll just return the user info
-      return res.status(200).json({
-        id: user.id,
-        email: user.email,
-        name: user.name || "User",
-        username: user.username,
-        role: user.role,
-        profilePicture: user.profilePicture
+      req.login(user, (err) => {
+        if (err) {
+          console.error("Error during login:", err);
+          return res.status(500).json({ message: "Failed to login" });
+        }
+
+        // For this prototype, we'll just return the user info
+        return res.status(200).json({
+          id: user.id,
+          email: user.email,
+          name: user.name || "User",
+          username: user.username,
+          role: user.role,
+          profilePicture: user.profilePicture
+        });
       });
     } catch (error) {
       if (error instanceof ZodError) {
