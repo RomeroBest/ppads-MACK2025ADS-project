@@ -73,7 +73,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     clientID: process.env.GOOGLE_CLIENT_ID || '',
     clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
     callbackURL: "/auth/google/callback"
-  },
   async (accessToken: string, refreshToken: string, profile: any, done: (error: Error | null, user?: any) => void) => {
     try {
       // Attempt to retrieve user by Google ID
