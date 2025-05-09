@@ -1,3 +1,4 @@
+
 import { useEffect } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/context/auth-context";
@@ -10,17 +11,15 @@ export default function LoginSuccess() {
   const { login } = useAuth();
   
   useEffect(() => {
-    // Parse user data from query params
     const params = new URLSearchParams(window.location.search);
-    const id = parseInt(params.get("id") || "");
-    const email = params.get("email") || "";
-    const name = params.get("name") || "";
-    const username = params.get("username") || "";
+    const id = parseInt(params.get("id") || "0");
+    const email = params.get("email");
+    const name = params.get("name");
+    const username = params.get("username");
     const role = params.get("role") || "user";
-    const profilePicture = params.get("profilePicture") || null;
+    const profilePicture = params.get("profilePicture");
     
     if (id && email && name && username) {
-      // Log the user in with the data from the URL
       login({
         id,
         email,
@@ -30,12 +29,15 @@ export default function LoginSuccess() {
         profilePicture
       });
       
-      // Redirect to dashboard after a short delay
-          setLocation("/dashboard", /* opcional: { replace: true } */);
-        } else {
-          console.error("Parâmetros de login ausentes.");
-        }
-    }, [login, setLocation]);
+      // Use a timeout to ensure the login state is updated before redirecting
+      setTimeout(() => {
+        setLocation("/dashboard");
+      }, 1500);
+    } else {
+      console.error("Missing login parameters");
+      setLocation("/login");
+    }
+  }, []);
   
   return (
     <div className="flex items-center justify-center min-h-screen bg-gray-50">
