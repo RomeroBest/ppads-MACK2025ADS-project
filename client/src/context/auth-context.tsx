@@ -1,3 +1,4 @@
+// src/context/auth-context.tsx
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 
 interface User {
@@ -11,6 +12,7 @@ interface User {
 
 interface AuthContextType {
   user: User | null;
+  loading: boolean;
   login: (userData: User) => void;
   logout: () => void;
   isAdmin: boolean;
@@ -19,32 +21,51 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(() => {
-    const savedUser = localStorage.getItem("user");
-    return savedUser ? JSON.parse(savedUser) : null;
-  });
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
 
+  // 1) Ao montar, busca /api/me para verificar sessão
   useEffect(() => {
-    if (user) {
-      localStorage.setItem("user", JSON.stringify(user));
-    } else {
-      localStorage.removeItem("user");
-    }
-  }, [user]);
+    fetch("/api/me", {
+      method: "GET",
+      credentials: "include", // envia o cookie de sessão
+      headers: {
+        "Content-Type": "application/json",
+      },
+    })
+      .then(res => {
+        if (!res.ok) throw new Error("Not authenticated");
+        return res.json() as Promise<User>;
+      })
+      .then(u => {
+        setUser(u);
+      })
+      .catch(() => {
+        setUser(null);
+      })
+      .finally(() => {
+        setLoading(false);
+      });
+  }, []);
 
+  // 2) login e logout podem simplesmente ajustar o estado local
   const login = (userData: User) => {
     setUser(userData);
   };
-
   const logout = () => {
-    setUser(null);
+    // opcional: chamar rota de logout no backend para destruir sessão
+    fetch("/api/logout", {
+      method: "POST",
+      credentials: "include",
+    }).finally(() => {
+      setUser(null);
+    });
   };
-  
-  // Check if user is an admin
-  const isAdmin = user?.role === 'admin';
+
+  const isAdmin = user?.role === "admin";
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, isAdmin }}>
+    <AuthContext.Provider value={{ user, loading, login, logout, isAdmin }}>
       {children}
     </AuthContext.Provider>
   );
@@ -52,8 +73,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
 export function useAuth() {
   const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error("useAuth must be used within an AuthProvider");
+  if (!context) {
+    throw new Error("useAuth must be used within AuthProvider");
   }
   return context;
 }

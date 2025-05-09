@@ -64,6 +64,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Initialize passport
   app.use(passport.initialize());
   app.use(passport.session());
+
+  app.get("/api/me", (req, res) => {
+    if (req.isAuthenticated()) {
+      return res.json(req.user);
+    }
+    res.status(401).json({ message: "Not authenticated" });
+  });
   
   passport.use(
     new GoogleStrategy(
@@ -143,7 +150,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     function(req: Request, res: Response) {
       // Successful authentication, redirect to login success page
       if (req.user) {
-        res.redirect('/login/success');
+        res.redirect('/dashboard');
       } else {
         res.redirect('/');
       }
