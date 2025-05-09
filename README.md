@@ -2,121 +2,131 @@
 
 Sistema web de gerenciamento de tarefas desenvolvido como parte do Projeto de Prática Profissional em ADS da Universidade Presbiteriana Mackenzie.
 
-## 👥 Grupo
-**Mack2025ADS**  
-Integrantes: Jorge Romero, Raul, Amarildo
+---
+
+## 👥 Grupo **Mack2025ADS**
+
+| Integrante   | GitHub                                       |
+| ------------ | -------------------------------------------- |
+| Jorge Romero | [@RomeroBest](https://github.com/RomeroBest) |
+| Raul         | —                                            |
+| Amarildo     | —                                            |
 
 ---
 
-## 🚀 Funcionalidades Principais
+## 🚀 Funcionalidades **(v 4 – maio / 2025)**
 
-- Login com e-mail e senha
-- Login com **conta Google** via OAuth 2.0
-- Painel de usuário com:
-  - Criação, edição e exclusão de tarefas
-  - Campos: título, descrição, prioridade, vencimento, tag e status
-  - Filtros por status (pendente, concluída) e tag
-  - Interface moderna e responsiva
-- Painel **admin**:
-  - Listagem e gerenciamento de usuários
-  - Alteração de `role` (user/admin)
-  - Exclusão de contas
+| Módulo                | Novidades                                                                                                                                              |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Autenticação**      | \* Login local (e‑mail & senha)\n\* Login com **Google OAuth 2.0** (passport‑google‑oauth20)\n\* Cookies de sessão seguros (`SameSite=None; Secure`)   |
+| **Tarefas**           | \* CRUD completo\n\* Filtros por **status**, **tag** e **busca**\n\* Prioridade, data de vencimento & descrição                                        |
+| **Admin Dashboard**   | \* Visão geral de contagem (total, admins, Google, locais)\n\* **User Management** (editar, excluir)\n\* **Role Management** – delegar ⁄ revogar admin |
+| **Perfil & Settings** | \* Atualizar dados pessoais\n\* Alterar senha\n\* Preferências de notificação                                                                          |
+| **Logs & Métricas**   | Logs server‑side expostos no panel da Render                                                                                                           |
 
 ---
 
-## 🧰 Tecnologias Utilizadas
+## 🧰 Tecnologias
 
-| Camada         | Tecnologias |
-|----------------|-------------|
-| Frontend       | React + TypeScript + Vite + Tailwind CSS |
-| Backend        | Node.js + Express + TypeScript |
-| ORM/Database   | Drizzle ORM + MySQL |
-| Autenticação   | JWT + Google OAuth (passport-google-oauth20) |
-| Compartilhamento de Tipos | `shared/` com Drizzle + Zod |
-| Hospedagem     | Local (localhost:5000), preparado para deploy com Vercel/Render |
+| Camada           | Stack                                                   |
+| ---------------- | ------------------------------------------------------- |
+| **Frontend**     | React + TypeScript • Vite • Tailwind CSS                |
+| **Backend**      | Node.js • Express • TypeScript                          |
+| **ORM / DB**     | Drizzle‑ORM 2 + **PostgreSQL 15** (Render)              |
+| **Autenticação** | **Express‑Session** + Cookies • Passport (JWT opcional) |
+| **Hospedagem**   | **Render** (web‑service + PostgreSQL)                   |
+| **Dev Tools**    | Vite, tsx, eslint, prettier, HeidiSQL (admin DB)        |
 
 ---
 
-## 📁 Estrutura do Projeto
+## 📁 Estrutura
 
-```
-ppads-MACK2025ADS-project/
-├── client/       # Frontend React
-├── server/       # Backend Node + Express
-└── shared/       # Schemas, tipos e validações compartilhadas
+```text
+ppads‑MACK2025ADS‑project/
+├── client/      # React SPA
+├── server/      # API REST + Auth
+└── shared/      # Schemas Drizzle + validações Zod
 ```
 
 ---
 
-## 🛠️ Como rodar o projeto localmente
+## ⚙️ Variáveis de Ambiente
 
-### 1. Clone o repositório
+### `server/.env`
+
+```env
+# PostgreSQL (Render – External URL)
+DATABASE_URL=postgresql://<user>:<password>@<host>:5432/ppads_mack2025ads_project
+
+# Google OAuth
+GOOGLE_CLIENT_ID=xxxxxxxxxxxxxxxxxxx.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=xxxxxxxxxxxxxxxxxxxxxxxx
+APP_URL=https://ppads‑mack2025ads‑project.onrender.com
+
+# Sessão
+SESSION_SECRET=suaChaveSuperSecreta
+NODE_ENV=production
+```
+
+### `client/.env`
+
+```env
+VITE_API_BASE=https://ppads‑mack2025ads‑project.onrender.com
+```
+
+---
+
+## 🛠️ Executando Localmente
 
 ```bash
-git clone https://github.com/RomeroBest/ppads-MACK2025ADS-project.git
-cd ppads-MACK2025ADS-project
+# 1. clone
+$ git clone https://github.com/RomeroBest/ppads-MACK2025ADS-project.git
+$ cd ppads-MACK2025ADS-project
+
+# 2. backend
+$ cd server && npm i
+$ cp .env.example .env   # edite com seus valores
+$ npm run dev            # http://localhost:5000
+
+# 3. frontend
+$ cd ../client && npm i
+$ cp .env.example .env   # aponte para http://localhost:5000
+$ npm run dev            # http://localhost:5173
 ```
 
-### 2. Configure o `.env` nas pastas `server/` e `client/`
+> 💡  Utilize **HeidiSQL** (ou psql) se quiser inspecionar o banco local/Render.
 
-#### Exemplo de `.env` no backend (`server/.env`):
+---
 
-```
-DATABASE_URL="mysql://root:@localhost:3307/tasktracker"
-GOOGLE_CLIENT_ID=...
-GOOGLE_CLIENT_SECRET=...
-GOOGLE_CALLBACK_URL=http://localhost:5000/auth/google/callback
-JWT_SECRET=...
-```
-
-### 3. Instale e rode o servidor
+## 🗃️ Migrations (Drizzle)
 
 ```bash
-cd server
-npm install
-npm run dev
+npx drizzle-kit generate # gera SQL na pasta drizzle
+npx drizzle-kit migrate  # aplica no banco indicado em DATABASE_URL
 ```
 
-### 4. Instale e rode o frontend
+---
 
-```bash
-cd ../client
-npm install
-npm run dev
-```
+## 🏷️ Tags
 
-### 5. Acesse a Aplicação
-Abra o navegador e acesse:
-
-```bash
-http://localhost:5173
-```
-
-📦 Tags de versões
-v1 - Final da Iteração 1 (entrega inicial)
-
-v2 - Final da Iteração 2 (com alterações e merge concluído)
+* **v1** – Iteração 1 (MVP CRUD)
+* **v2** – Iteração 2 (Google OAuth + Dashboard inicial)
+* **v3** – Hotfixes & refactor para Drizzle‑ORM
+* **v4** – Segurança de sessão, deploy Render, Admin Dashboard completo ✅ (**current**)
 
 ---
 
 ## 🔐 Acesso Administrativo
 
-- Para acessar o painel admin, o usuário precisa estar com o `role = "admin"`.
-- O backend contém rotas protegidas com os middlewares `verifyToken` e `isAdmin`.
+Para acessar `/admin` o usuário precisa ter `role = 'admin'`. A troca de role pode ser feita:
+
+1. Via HeidiSQL (`UPDATE users SET role='admin' WHERE email='...'`)
+2. Pelo próprio painel Admin (**Role Management → Delegate Admin**).
+
+Rotas protegidas usam os middlewares `passport.authenticate('session')` + `isAdmin`.
 
 ---
 
-## 📝 Observações
+## 📝 Licença
 
-- O projeto usa Drizzle ORM com MySQL. Certifique-se de que seu banco está ativo e compatível com os schemas definidos.
-- Migrations devem ser geradas com:
-  ```bash
-  npx drizzle-kit generate
-  npx drizzle-kit migrate
-  ```
-
----
-
-## 📄 Licença
-
-Este projeto está licenciado sob a [MIT License](LICENSE).
+Distribuído sob a licença [MIT](LICENSE).
