@@ -1,35 +1,27 @@
-
-import { Pool, neonConfig } from '@neondatabase/serverless';
-import { drizzle } from 'drizzle-orm/neon-serverless';
-import ws from "ws";
+import { Pool } from 'pg';
+import { drizzle } from 'drizzle-orm/postgres-js';
+import { migrate } from 'drizzle-orm/postgres-js/migrator';
 import * as schema from "@shared/schema";
+import { env } from '../env';
+import postgres from 'postgres';
+import { set } from 'drizzle-orm';
 
-neonConfig.webSocketConstructor = ws;
+const connectionString = env.DATABASE_URL;
 
-if (!process.env.DATABASE_URL) {
-  throw new Error("DATABASE_URL must be set");
+if (!connectionString) {
+    throw new Error("DATABASE_URL must be set");
 }
 
-// PostgreSQL configuration with retry logic and pooling
-const createPool = async () => {
-  const pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
-    maxRetries: 3,
-    connectionTimeoutMillis: 10000,
-    maxConnections: 10,
-    wsProxy: true
-  });
+const client = postgres(connectionString);
 
-  try {
-    // Test the connection
-    await pool.query('SELECT 1');
-    console.log('Database connection successful');
-    return pool;
-  } catch (error) {
-    console.error('Database connection failed:', error);
-    throw error;
-  }
+export const db = drizzle(client, { schema });
+
+export const migrateDb = async () => {
+    try {
+        console.log("Migrating database...");
+        await migrate(db, { migrationsFolder: "./drizzle" });
+        console.log("Database migrated successfully!");
+    } catch (error) {
+        console.error("Failed to migrate database:", error);
+    }
 };
-
-export const pgPool = await createPool();
-export const db = drizzle(pgPool, { schema });
