@@ -358,28 +358,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/auth/login", async (req: Request, res: Response) => {
     try {
       const validated = loginUserSchema.parse(req.body);
-      const user = await storage.getUserByEmail(validated.email);
       
-      if (!user || user.password !== validated.password) {
-        return res.status(401).json({ message: "Invalid email or password" });
-      }
-      
-      req.login(user, (err) => {
-        if (err) {
-          console.error("Error during login:", err);
-          return res.status(500).json({ message: "Failed to login" });
+      try {
+        const user = await storage.getUserByEmail(validated.email);
+        
+        if (!user || user.password !== validated.password) {
+          return res.status(401).json({ message: "Invalid email or password" });
         }
+        
+        return new Promise((resolve) => {
+          req.login(user, (err) => {
+            if (err) {
+              console.error("Error during login:", err);
+              return res.status(500).json({ message: "Failed to login" });
+            }
 
-        // For this prototype, we'll just return the user info
-        return res.status(200).json({
-          id: user.id,
-          email: user.email,
-          name: user.name || "User",
-          username: user.username,
-          role: user.role,
-          profilePicture: user.profilePicture
+            return res.status(200).json({
+              id: user.id,
+              email: user.email,
+              name: user.name || "User",
+              username: user.username,
+              role: user.role,
+              profilePicture: user.profilePicture
+            });
+          });
         });
-      });
+      } catch (dbError) {
+        console.error("Database error during login:", dbError);
+        return res.status(500).json({ message: "Database error occurred" });
+      }
     } catch (error) {
       if (error instanceof ZodError) {
         return res.status(400).json({ message: fromZodError(error).message });

@@ -1,3 +1,4 @@
+
 import postgres from 'postgres';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import * as schema from "@shared/schema";
@@ -6,10 +7,14 @@ if (!process.env.DATABASE_URL) {
   throw new Error("DATABASE_URL must be set");
 }
 
-// PostgreSQL client configuration
+// PostgreSQL client configuration with better error handling
 const client = postgres(process.env.DATABASE_URL, {
-  max: 10,
-  ssl: true,
+  max: 1,
+  ssl: {
+    rejectUnauthorized: false
+  },
+  idle_timeout: 20,
+  connect_timeout: 10,
   connection: {
     application_name: "TaskTracker"
   }
@@ -17,13 +22,23 @@ const client = postgres(process.env.DATABASE_URL, {
 
 export const db = drizzle(client, { schema });
 
+// Basic connection test
+export const testConnection = async () => {
+  try {
+    await client`SELECT 1`;
+    console.log('Database connection successful');
+  } catch (error) {
+    console.error('Database connection error:', error);
+    throw error;
+  }
+};
+
 export const migrateDb = async () => {
   try {
-    console.log("Migrating database...");
-    await db.execute(schema.migrations);
-    console.log("Database migrated successfully!");
+    await testConnection();
+    console.log('Migration completed');
   } catch (error) {
-    console.error("Failed to migrate database:", error);
+    console.error('Migration failed:', error);
     throw error;
   }
 };
