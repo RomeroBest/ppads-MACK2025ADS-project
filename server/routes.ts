@@ -69,45 +69,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   );
   // Google auth configuration is now handled in passport.ts
-      async (accessToken, refreshToken, profile, done) => {
+      async (accessToken: string, refreshToken: string, profile: any, done: (error: Error | null, user?: any) => void) => {
         try {
-          // Check if user already exists by Google ID
+          // Attempt to retrieve user by Google ID
           let user = await storage.getUserByGoogleId(profile.id);
-          
+
           if (!user) {
-            // Get email from profile
-            const email = profile.emails && profile.emails[0] ? profile.emails[0].value : "";
-            
-            // Check if the user exists by email
-            const userByEmail = await storage.getUserByEmail(email);
-            
-            if (userByEmail) {
-              // Update existing user with Google ID
-              user = await storage.updateUser(userByEmail.id, {
-                googleId: profile.id,
-                profilePicture: profile.photos && profile.photos[0] ? profile.photos[0].value : null
-              });
+            // If Google ID doesn't exist, try to retrieve user by email
+            const email = profile.emails && profile.emails.length > 0 ? profile.emails[0].value : null;
+
+            if (email) {
+              user = await storage.getUserByEmail(email);
+
+              if (user) {
+                // If user exists with the same email, update the Google ID
+                user = await storage.updateUser(user.id, {
+                  googleId: profile.id,
+                  profilePicture: profile.photos && profile.photos.length > 0 ? profile.photos[0].value : null,
+                });
+              } else {
+                // If email doesn't exist, create a new user with the Google profile data
+                const username = `google_user_${Date.now()}`; // Generate a unique username
+                user = await storage.createUser({
+                  email,
+                  username,
+                  name: profile.displayName,
+                  password: Math.random().toString(36).slice(2), // Random password
+                  googleId: profile.id,
+                  profilePicture: profile.photos && profile.photos.length > 0 ? profile.photos[0].value : null,
+                  role: 'user',
+                });
+              }
             } else {
-              // Create a new user
-              user = await storage.createUser({
-                email,
-                name: profile.displayName || "",
-                username: `user_${profile.id.substring(0, 8)}`,
-                password: Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2), // Random password for Google users
-                googleId: profile.id,
-                profilePicture: profile.photos && profile.photos[0] ? profile.photos[0].value : null,
-                role: "user"
-              });
+              // If no email is available, return an error
+              return done(new Error("Email not provided by Google."));
             }
           }
-          
-          done(null, user);
+
+          // User found or created successfully
+          return done(null, user);
         } catch (error) {
-          done(error as Error, undefined);
+          // Handle errors during user retrieval or creation
+          return done(error as Error);
         }
       }
     )
-  );
 
   // Auth routes
   app.post("/api/auth/register", async (req: Request, res: Response) => {
