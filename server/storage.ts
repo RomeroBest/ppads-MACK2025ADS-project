@@ -1,5 +1,6 @@
-import { InsertTask, InsertUser, Task, TaskFormValues, User } from "@shared/schema";
-
+import { InsertTask, InsertUser, Task, TaskFormValues, User, users, tasks } from "@shared/schema";
+import { db } from './db';
+import { eq } from 'drizzle-orm';
 
 export interface IStorage {
   // User operations
@@ -45,9 +46,10 @@ export class MemStorage implements IStorage {
   }
 
   async getUserByEmail(email: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(user => user.email === email);
+    return Array.from(this.users.values()).find(
+      (user) => user.email === email,
+    );
   }
-  
   
   async getUserByGoogleId(googleId: string): Promise<User | undefined> {
     return Array.from(this.users.values()).find(
@@ -68,7 +70,6 @@ export class MemStorage implements IStorage {
     const updatedUser: User = {
       ...user,
       ...userData,
-      username: userData.username ?? user.username, // Garantir que o username seja mantido ou atualizado corretamente
     };
 
     this.users.set(id, updatedUser);
@@ -76,25 +77,18 @@ export class MemStorage implements IStorage {
   }
 
   async deleteUser(id: number): Promise<boolean> {
-    const parsedId = Number(id);
-    console.log("IDs existentes:", Array.from(this.users.keys()));
-    console.log("Tentando deletar o ID:", parsedId);
-  
-    if (!this.users.has(parsedId)) {
-      console.log("Usuário não encontrado para exclusão.");
+    if (!this.users.has(id)) {
       return false;
     }
-  
-    // Exclui tarefas associadas
-    const userTasks = await this.getTasksByUserId(parsedId);
+    
+    // Also delete all tasks for this user
+    const userTasks = await this.getTasksByUserId(id);
     for (const task of userTasks) {
       await this.deleteTask(task.id);
     }
-  
-    return this.users.delete(parsedId);
+    
+    return this.users.delete(id);
   }
-  
-  
 
   async createUser(insertUser: InsertUser): Promise<User> {
     const id = this.userId++;
@@ -106,9 +100,7 @@ export class MemStorage implements IStorage {
       role: insertUser.role || 'user',
       googleId: insertUser.googleId || null,
       profilePicture: insertUser.profilePicture || null,
-      name: insertUser.name || null,
-      username: insertUser.username || `user${id}`, // Garantir que o campo username esteja presente
-      status: "active", // ✅ incluído para satisfazer o tipo User
+      name: insertUser.name || null
     };
     this.users.set(id, user);
     return user;
@@ -128,18 +120,13 @@ export class MemStorage implements IStorage {
   async createTask(insertTask: InsertTask): Promise<Task> {
     const id = this.taskId++;
     const now = new Date();
-    const task: Task = {
+    const task: Task = { 
+      ...insertTask, 
       id,
       createdAt: now,
-      title: insertTask.title,
-      priority: insertTask.priority,
-      dueDate: insertTask.dueDate,
-      tag: insertTask.tag,
-      userId: insertTask.userId,
-      description: insertTask.description ?? null,
-      completed: insertTask.completed ?? false,
+      description: insertTask.description || null,
+      completed: insertTask.completed || false
     };
-    
     this.tasks.set(id, task);
     return task;
   }
@@ -153,7 +140,7 @@ export class MemStorage implements IStorage {
     const updatedTask: Task = {
       ...task,
       title: taskUpdate.title,
-      description: taskUpdate.description || "",
+      description: taskUpdate.description || null,
       priority: taskUpdate.priority,
       dueDate: taskUpdate.dueDate,
       tag: taskUpdate.tag,
@@ -172,4 +159,98 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+// Create a DatabaseStorage class that implements IStorage
+export class DatabaseStorage implements IStorage {
+  private userSequence: number = 1;
+  private taskSequence: number = 1;
+
+  // User operations
+  async getUser(id: number): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user || undefined;
+  }
+
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user || undefined;
+  }
+
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.email, email));
+    return user || undefined;
+  }
+
+  async getUserByGoogleId(googleId: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.googleId, googleId));
+    return user || undefined;
+  }
+
+  async getAllUsers(): Promise<User[]> {
+    return await db.select().from(users);
+  }
+
+  async updateUser(id: number, userData: Partial<InsertUser>): Promise<User | undefined> {
+    const [updatedUser] = await db
+      .update(users)
+      .set(userData)
+      .where(eq(users.id, id))
+      .returning();
+    
+    return updatedUser || undefined;
+  }
+
+  async deleteUser(id: number): Promise<boolean> {
+    // First delete all tasks associated with this user
+    await db.delete(tasks).where(eq(tasks.userId, id));
+    
+    // Then delete the user
+    const result = await db.delete(users).where(eq(users.id, id)).returning();
+    return result.length > 0;
+  }
+
+  async createUser(insertUser: InsertUser): Promise<User> {
+    const [user] = await db
+      .insert(users)
+      .values(insertUser)
+      .returning();
+    
+    return user;
+  }
+
+  // Task operations
+  async getTaskById(id: number): Promise<Task | undefined> {
+    const [task] = await db.select().from(tasks).where(eq(tasks.id, id));
+    return task || undefined;
+  }
+
+  async getTasksByUserId(userId: number): Promise<Task[]> {
+    return await db.select().from(tasks).where(eq(tasks.userId, userId));
+  }
+
+  async createTask(insertTask: InsertTask): Promise<Task> {
+    const [task] = await db
+      .insert(tasks)
+      .values(insertTask)
+      .returning();
+    
+    return task;
+  }
+
+  async updateTask(id: number, taskUpdate: TaskFormValues): Promise<Task | undefined> {
+    const [updatedTask] = await db
+      .update(tasks)
+      .set(taskUpdate)
+      .where(eq(tasks.id, id))
+      .returning();
+    
+    return updatedTask || undefined;
+  }
+
+  async deleteTask(id: number): Promise<boolean> {
+    const result = await db.delete(tasks).where(eq(tasks.id, id)).returning();
+    return result.length > 0;
+  }
+}
+
+// Use DatabaseStorage instead of MemStorage
+export const storage = new DatabaseStorage();

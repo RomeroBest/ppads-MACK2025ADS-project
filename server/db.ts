@@ -1,20 +1,15 @@
-import dotenv from "dotenv";
-dotenv.config();
+import { Pool, neonConfig } from '@neondatabase/serverless';
+import { drizzle } from 'drizzle-orm/neon-serverless';
+import ws from "ws";
+import * as schema from "@shared/schema";
 
-import { drizzle } from 'drizzle-orm/mysql2';
-import mysql from "mysql2/promise";
-import * as schema from '../shared/schema';
+neonConfig.webSocketConstructor = ws;
 
-const pool = mysql.createPool({
-  host: process.env.DB_HOST,
-  port: Number(process.env.DB_PORT),
-  user: process.env.DB_USER,
-  password: process.env.DB_PASS,
-  database: process.env.DB_NAME,
-});
+if (!process.env.DATABASE_URL) {
+  throw new Error(
+    "DATABASE_URL must be set. Did you forget to provision a database?",
+  );
+}
 
-// Esta é a instância correta que você deve exportar
-export const db = drizzle(pool, {
-  schema,
-  mode: "default", // ou "planetscale" se estiver usando esse banco
-});
+export const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+export const db = drizzle({ client: pool, schema });
