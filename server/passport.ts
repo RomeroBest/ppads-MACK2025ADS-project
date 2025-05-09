@@ -4,11 +4,14 @@ import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
 import { storage } from './storage';
 import { InsertUser } from '@shared/schema';
 
-// Set up the Google OAuth strategy with environment variables
+if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET || !process.env.APP_URL) {
+  throw new Error("Missing required environment variables for Google OAuth");
+}
+
 passport.use(new GoogleStrategy({
-    clientID: process.env.GOOGLE_CLIENT_ID!,
-    clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-    callbackURL: '/auth/google/callback',
+    clientID: process.env.GOOGLE_CLIENT_ID,
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+    callbackURL: `${process.env.APP_URL}/auth/google/callback`,
     proxy: true
   },
   async (accessToken, refreshToken, profile, done) => {
