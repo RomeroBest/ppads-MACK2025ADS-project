@@ -68,11 +68,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     }
   );
-  // Google auth configuration is now handled in passport.ts
-      async (accessToken: string, refreshToken: string, profile: any, done: (error: Error | null, user?: any) => void) => {
-        try {
-          // Attempt to retrieve user by Google ID
-          let user = await storage.getUserByGoogleId(profile.id);
+  // Configure Google Strategy
+  passport.use(new GoogleStrategy({
+    clientID: process.env.GOOGLE_CLIENT_ID || '',
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
+    callbackURL: "/auth/google/callback"
+  },
+  async (accessToken: string, refreshToken: string, profile: any, done: (error: Error | null, user?: any) => void) => {
+    try {
+      // Attempt to retrieve user by Google ID
+      let user = await storage.getUserByGoogleId(profile.id);
 
           if (!user) {
             // If Google ID doesn't exist, try to retrieve user by email
