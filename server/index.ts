@@ -73,15 +73,47 @@ app.use((req, res, next) => {
     serveStatic(app);
   }
 
-  // ALWAYS serve the app on port 5000
-  // this serves both the API and the client.
-  // It is the only port that is not firewalled.
+  // Try to serve the app on port 5000
   const port = 5000;
+  
+  // Kill any existing process on port 5000
+  const cleanupPort = async () => {
+    try {
+      await new Promise((resolve, reject) => {
+        const { exec } = require('child_process');
+        exec(`fuser -k ${port}/tcp`, (error, stdout, stderr) => {
+          resolve();
+        });
+      });
+      // Wait a moment for the port to be freed
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    } catch (error) {
+      console.error('Error cleaning up port:', error);
+    }
+  };
+
+  await cleanupPort();
+  
   server.listen({
     port,
     host: "0.0.0.0",
     reusePort: true,
   }, () => {
     log(`serving on port ${port}`);
+  }).on('error', async (error: any) => {
+    if (error.code === 'EADDRINUSE') {
+      console.log('Port in use, attempting cleanup...');
+      await cleanupPort();
+      // Try one more time
+      server.listen({
+        port,
+        host: "0.0.0.0",
+        reusePort: true,
+      }, () => {
+        log(`serving on port ${port}`);
+      });
+    } else {
+      throw error;
+    }
   });
 })();

@@ -10,6 +10,23 @@ if (!process.env.DATABASE_URL) {
   throw new Error("DATABASE_URL must be set");
 }
 
-// PostgreSQL configuration
-export const pgPool = new Pool({ connectionString: process.env.DATABASE_URL });
+// PostgreSQL configuration with retry logic
+const createPool = async () => {
+  const pool = new Pool({ 
+    connectionString: process.env.DATABASE_URL,
+    connectionTimeoutMillis: 10000,
+    maxRetries: 3
+  });
+  
+  try {
+    // Test the connection
+    await pool.query('SELECT 1');
+    return pool;
+  } catch (error) {
+    console.error('Database connection failed:', error);
+    throw error;
+  }
+};
+
+export const pgPool = await createPool();
 export const db = drizzle(pgPool, { schema });
