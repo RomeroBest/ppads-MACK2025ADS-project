@@ -1,21 +1,30 @@
 
-import { Pool } from '@neondatabase/serverless';
-import fs from 'fs';
+import postgres from 'postgres';
+import fs from 'fs/promises';
 import path from 'path';
+import { fileURLToPath } from 'url';
 
-const DATABASE_URL = "postgresql://ppads_mack2025ads_project_user:GiwvdLNBX4cQfGddZqcIUAZIH8E5tpyu@dpg-d0edbis9c44c73crsbh0-a.oregon-postgres.render.com/ppads_mack2025ads_project";
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+if (!process.env.DATABASE_URL) {
+  throw new Error("DATABASE_URL environment variable not set");
+}
 
 async function runMigrations() {
-  const pool = new Pool({ connectionString: DATABASE_URL });
+  const sql = postgres(process.env.DATABASE_URL, {
+    ssl: { rejectUnauthorized: false },
+  });
   
   try {
-    const sql = fs.readFileSync(path.join(__dirname, 'migrations/init.sql'), 'utf8');
-    await pool.query(sql);
+    const migrationSQL = await fs.readFile(path.join(__dirname, 'migrations/init.sql'), 'utf8');
+    await sql.unsafe(migrationSQL);
     console.log('Migrations completed successfully');
   } catch (error) {
     console.error('Migration failed:', error);
+    process.exit(1);
   } finally {
-    await pool.end();
+    await sql.end();
   }
 }
 

@@ -22,11 +22,5 @@ CREATE TABLE IF NOT EXISTS tasks (
   tag TEXT NOT NULL,
   completed BOOLEAN NOT NULL DEFAULT false,
   user_id INTEGER NOT NULL,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (user_id) REFERENCES users(id)
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
-
--- Create index for common queries
-CREATE INDEX IF NOT EXISTS idx_tasks_user_id ON tasks(user_id);
-CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
-CREATE INDEX IF NOT EXISTS idx_users_google_id ON users(google_id);
