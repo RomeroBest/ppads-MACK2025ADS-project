@@ -78,7 +78,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Attempt to retrieve user by Google ID
       let user = await storage.getUserByGoogleId(profile.id);
 
-          if (!user) {
+      if (!user) {
             // If Google ID doesn't exist, try to retrieve user by email
             const email = profile.emails && profile.emails.length > 0 ? profile.emails[0].value : null;
 
