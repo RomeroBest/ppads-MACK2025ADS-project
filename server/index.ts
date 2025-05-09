@@ -80,11 +80,9 @@ app.use((req, res, next) => {
   // Kill any existing process on port 5000
   const cleanupPort = async () => {
     try {
-      await new Promise((resolve, reject) => {
-        const { exec } = require('child_process');
-        exec(`fuser -k ${port}/tcp`, (error, stdout, stderr) => {
-          resolve();
-        });
+      const { exec } = await import('child_process');
+      await new Promise((resolve) => {
+        exec(`fuser -k ${port}/tcp`, () => resolve(null));
       });
       // Wait a moment for the port to be freed
       await new Promise(resolve => setTimeout(resolve, 1000));
